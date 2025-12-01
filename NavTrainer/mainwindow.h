@@ -2,6 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPoint>
+#include <QString>
+
+class MapOverlayPanel;
 
 class Carta;
 
@@ -23,5 +27,16 @@ public:
 private:
     Ui::MainWindow *ui;
     Carta *m_carta = nullptr;
+    MapOverlayPanel *m_overlayPanel = nullptr;
+    QString m_currentMapTitle;
+
+    void setupMapView();
+    void setupOverlayPanel();
+    bool applyOverlayStyle();
+    void updateMapTitle(const QString &title);
+    void promptForMapChange();
+    bool loadMapResource(const QString &resourcePath, const QString &title);
+    bool loadMapFromFile(const QString &filePath);
+    void handleOverlayDrag(const QPoint &delta);
 };
 #endif // MAINWINDOW_H

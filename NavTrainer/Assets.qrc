@@ -1,5 +1,8 @@
 <RCC>
 	<qresource prefix="/assets">
 		<file>carta_nautica.jpg</file>
+		<file>styles/map_overlay.qss</file>
+		<file>ruler.svg</file>
+		<file>transportador.svg</file>
 	</qresource>
 </RCC>

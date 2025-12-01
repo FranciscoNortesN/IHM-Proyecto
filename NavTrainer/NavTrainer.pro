@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui svg svgwidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,13 +10,15 @@ CONFIG += c++17
 
 SOURCES += \
     carta.cpp \
-    class.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    mapoverlaypanel.cpp
 
 HEADERS += \
     carta.h \
-    mainwindow.h
+    mainwindow.h \
+    mapoverlaypanel.h \
+    maptooltypes.h
 
 FORMS += \
     mainwindow.ui
