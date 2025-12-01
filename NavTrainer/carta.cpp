@@ -6,8 +6,12 @@
 #include <QDropEvent>
 #include <QFrame>
 #include <QGraphicsItem>
+#include <QGraphicsPathItem>
 #include <QGraphicsPixmapItem>
+#include <QGraphicsRectItem>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsSceneWheelEvent>
+#include <QGraphicsSimpleTextItem>
 #include <QtSvgWidgets/qgraphicssvgitem.h>
 #include <QMouseEvent>
 #include <QMimeData>
@@ -19,10 +23,16 @@
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QtSvg/qsvgrenderer.h>
+#include <QPen>
 #include <QWheelEvent>
 #include <QWidget>
 #include <QtMath>
+#include <QTimer>
+#include <QLineEdit>
+#include <QLineF>
+#include <QInputDialog>
 #include <algorithm>
+#include <cmath>
 
 class MapToolItem : public QGraphicsSvgItem
 {
@@ -35,6 +45,36 @@ public:
         setAcceptedMouseButtons(Qt::LeftButton);
         setZValue(100.0);
         setData(Carta::ToolItemDataKey, true);
+        setAcceptHoverEvents(true);
+
+        m_angleLabel = new QGraphicsSimpleTextItem(this);
+        m_angleLabel->setBrush(QBrush(Qt::white));
+        QFont font = m_angleLabel->font();
+        font.setBold(true);
+        font.setPointSizeF(font.pointSizeF() + 2);
+        m_angleLabel->setFont(font);
+        m_angleLabel->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+        m_angleLabel->hide();
+
+        m_angleLabelBg = new QGraphicsRectItem(QRectF(0, 0, 0, 0), this);
+        m_angleLabelBg->setBrush(QColor(0, 0, 0, 180));
+        m_angleLabelBg->setPen(Qt::NoPen);
+        m_angleLabelBg->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+        m_angleLabelBg->setZValue(m_angleLabel->zValue() - 0.1);
+        m_angleLabelBg->hide();
+
+        m_hideLabelTimer.setInterval(1200);
+        m_hideLabelTimer.setSingleShot(true);
+        QObject::connect(&m_hideLabelTimer, &QTimer::timeout, [this]()
+                         {
+            if (m_angleLabel)
+            {
+                m_angleLabel->hide();
+            }
+            if (m_angleLabelBg)
+            {
+                m_angleLabelBg->hide();
+            } });
     }
 
     ~MapToolItem() override
@@ -69,9 +109,72 @@ protected:
         }
     }
 
+    void wheelEvent(QGraphicsSceneWheelEvent *event) override
+    {
+        if (!event)
+        {
+            return;
+        }
+
+        const QPointF localPos = event->pos();
+        const QPointF center = boundingRect().center();
+        const qreal radius = boundingRect().width() * 0.25;
+        if (QLineF(localPos, center).length() > radius)
+        {
+            QGraphicsSvgItem::wheelEvent(event);
+            return;
+        }
+
+        const int deltaValue = event->delta();
+        if (deltaValue == 0)
+        {
+            QGraphicsSvgItem::wheelEvent(event);
+            return;
+        }
+
+        const qreal degrees = static_cast<qreal>(deltaValue) / 8.0; // Qt delivers eighths of a degree
+        m_rotationDeg = std::fmod(m_rotationDeg + degrees, 360.0);
+        if (m_rotationDeg < 0)
+        {
+            m_rotationDeg += 360.0;
+        }
+
+        setRotation(m_rotationDeg);
+        showAngleLabel();
+        event->accept();
+    }
+
 private:
     QString m_toolId;
     QPointer<Carta> m_view;
+    qreal m_rotationDeg = 0.0;
+    QGraphicsSimpleTextItem *m_angleLabel = nullptr;
+    QGraphicsRectItem *m_angleLabelBg = nullptr;
+    QTimer m_hideLabelTimer;
+
+    void showAngleLabel()
+    {
+        if (!m_angleLabel || !m_angleLabelBg)
+        {
+            return;
+        }
+
+        const QString text = QString::number(qRound(m_rotationDeg)) + QStringLiteral("°");
+        m_angleLabel->setText(text);
+        const QRectF textRect = m_angleLabel->boundingRect();
+        const QPointF center = boundingRect().center();
+        const QPointF offset(0, -boundingRect().height() * 0.1);
+        const QPointF labelPos = center + offset - QPointF(textRect.width() / 2, textRect.height() / 2);
+        m_angleLabel->setPos(labelPos);
+
+        QRectF bgRect = textRect.adjusted(-6, -3, 6, 3);
+        m_angleLabelBg->setRect(bgRect);
+        m_angleLabelBg->setPos(labelPos);
+
+        m_angleLabelBg->show();
+        m_angleLabel->show();
+        m_hideLabelTimer.start();
+    }
 };
 
 Carta::Carta(QWidget *parent)
@@ -125,10 +228,10 @@ void Carta::setOverlayWidget(QWidget *widget)
     m_overlayWidget->raise();
     m_overlayWidget->show();
 
-    connect(m_overlayWidget, &QObject::destroyed, this, [this]() {
+    connect(m_overlayWidget, &QObject::destroyed, this, [this]()
+            {
         setOverlayMouseTransparent(false);
-        m_overlayWidget = nullptr;
-    });
+        m_overlayWidget = nullptr; });
 
     resetOverlayPosition();
 }
@@ -158,6 +261,105 @@ void Carta::resetOverlayPosition()
     syncOverlayToScene(true);
 }
 
+void Carta::setInteractionMode(InteractionMode mode)
+{
+    if (m_interactionMode == mode)
+    {
+        return;
+    }
+
+    if (m_interactionMode == InteractionMode::Paint && m_currentStroke)
+    {
+        finishStroke();
+    }
+
+    if (mode != InteractionMode::Erase)
+    {
+        m_erasing = false;
+    }
+
+    if (mode != InteractionMode::Drag && m_panning)
+    {
+        m_panning = false;
+        unsetCursor();
+    }
+
+    m_interactionMode = mode;
+}
+
+void Carta::setDrawingColor(const QColor &color)
+{
+    if (!color.isValid())
+    {
+        return;
+    }
+    m_drawingColor = color;
+
+    if (m_currentStroke)
+    {
+        QPen pen = m_currentStroke->pen();
+        QColor c = color;
+        c.setAlphaF(std::clamp(m_strokeOpacity / 100.0, 0.0, 1.0));
+        pen.setColor(c);
+        m_currentStroke->setPen(pen);
+    }
+}
+
+void Carta::setStrokeWidth(int width)
+{
+    if (width <= 0)
+    {
+        return;
+    }
+    m_strokeWidth = width;
+    if (m_currentStroke)
+    {
+        QPen pen = m_currentStroke->pen();
+        pen.setWidth(m_strokeWidth);
+        m_currentStroke->setPen(pen);
+    }
+}
+
+void Carta::setStrokeOpacity(int opacityPercent)
+{
+    m_strokeOpacity = std::clamp(opacityPercent, 1, 100);
+    if (m_currentStroke)
+    {
+        QPen pen = m_currentStroke->pen();
+        QColor c = pen.color();
+        c.setAlphaF(std::clamp(m_strokeOpacity / 100.0, 0.0, 1.0));
+        pen.setColor(c);
+        m_currentStroke->setPen(pen);
+    }
+}
+
+void Carta::clearUserAnnotations()
+{
+    abortCurrentStroke();
+    clearToolInstances();
+    removeTextItems();
+    removeStrokeItems();
+    m_annotationStack.clear();
+    m_erasing = false;
+}
+
+void Carta::undoLastAnnotation()
+{
+    while (!m_annotationStack.isEmpty())
+    {
+        QGraphicsItem *item = m_annotationStack.takeLast();
+        if (!item)
+        {
+            continue;
+        }
+
+        if (removeAnnotationItem(item))
+        {
+            break;
+        }
+    }
+}
+
 bool Carta::loadMap(const QString &filePath)
 {
     QPixmap pixmap(filePath);
@@ -185,7 +387,12 @@ bool Carta::setMapPixmap(const QPixmap &pixmap)
 
 void Carta::clearMap()
 {
+    abortCurrentStroke();
     clearToolInstances();
+    removeTextItems();
+    removeStrokeItems();
+    m_annotationStack.clear();
+    m_erasing = false;
 
     if (m_mapItem)
     {
@@ -215,6 +422,11 @@ void Carta::setZoomRange(qreal minFactor, qreal maxFactor)
 
 void Carta::wheelEvent(QWheelEvent *event)
 {
+    if (dispatchWheelEventToTool(event))
+    {
+        return;
+    }
+
     if (!m_mapItem)
     {
         event->ignore();
@@ -247,11 +459,29 @@ void Carta::mousePressEvent(QMouseEvent *event)
         QGraphicsItem *clickedItem = itemAt(event->pos());
         if (!isToolItem(clickedItem))
         {
-            m_panning = true;
-            m_lastMousePos = event->pos();
-            setCursor(Qt::ClosedHandCursor);
-            event->accept();
-            return;
+            const QPointF scenePos = mapToScene(event->pos());
+            switch (m_interactionMode)
+            {
+            case InteractionMode::Text:
+                handleTextClick(scenePos);
+                event->accept();
+                return;
+            case InteractionMode::Paint:
+                startStroke(scenePos);
+                event->accept();
+                return;
+            case InteractionMode::Erase:
+                m_erasing = true;
+                eraseAt(scenePos);
+                event->accept();
+                return;
+            case InteractionMode::Drag:
+                m_panning = true;
+                m_lastMousePos = event->pos();
+                setCursor(Qt::ClosedHandCursor);
+                event->accept();
+                return;
+            }
         }
     }
 
@@ -260,6 +490,20 @@ void Carta::mousePressEvent(QMouseEvent *event)
 
 void Carta::mouseMoveEvent(QMouseEvent *event)
 {
+    if (m_currentStroke)
+    {
+        extendStroke(mapToScene(event->pos()));
+        event->accept();
+        return;
+    }
+
+    if (m_erasing && (event->buttons() & Qt::LeftButton))
+    {
+        eraseAt(mapToScene(event->pos()));
+        event->accept();
+        return;
+    }
+
     if (m_panning)
     {
         const QPoint delta = event->pos() - m_lastMousePos;
@@ -275,12 +519,29 @@ void Carta::mouseMoveEvent(QMouseEvent *event)
 
 void Carta::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::LeftButton && m_panning)
+    if (event->button() == Qt::LeftButton)
     {
-        m_panning = false;
-        unsetCursor();
-        event->accept();
-        return;
+        if (m_currentStroke)
+        {
+            finishStroke();
+            event->accept();
+            return;
+        }
+
+        if (m_erasing)
+        {
+            m_erasing = false;
+            event->accept();
+            return;
+        }
+
+        if (m_panning)
+        {
+            m_panning = false;
+            unsetCursor();
+            event->accept();
+            return;
+        }
     }
 
     QGraphicsView::mouseReleaseEvent(event);
@@ -654,4 +915,233 @@ bool Carta::overlayContainsViewportPoint(const QPoint &point) const
     }
 
     return m_overlayWidget->geometry().contains(point);
+}
+
+bool Carta::dispatchWheelEventToTool(QWheelEvent *event)
+{
+    if (!event)
+    {
+        return false;
+    }
+
+    const QPoint viewPos = wheelEventViewportPos(event);
+    if (!viewport()->rect().contains(viewPos))
+    {
+        return false;
+    }
+
+    QGraphicsItem *item = itemAt(viewPos);
+    if (!isToolItem(item))
+    {
+        return false;
+    }
+
+    QGraphicsView::wheelEvent(event);
+    return event->isAccepted();
+}
+
+QPoint Carta::wheelEventViewportPos(const QWheelEvent *event) const
+{
+    if (!event)
+    {
+        return QPoint();
+    }
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return event->position().toPoint();
+#else
+    return event->pos();
+#endif
+}
+
+void Carta::handleTextClick(const QPointF &scenePos)
+{
+    bool ok = false;
+    const QString input = QInputDialog::getText(this, tr("Añadir texto"), tr("Contenido"),
+                                                QLineEdit::Normal, QString(), &ok);
+    const QString text = input.trimmed();
+    if (!ok || text.isEmpty())
+    {
+        return;
+    }
+
+    auto *textItem = new QGraphicsSimpleTextItem(text);
+    QFont font = textItem->font();
+    font.setPointSize(26);
+    font.setWeight(QFont::DemiBold);
+    textItem->setFont(font);
+    textItem->setBrush(QBrush(m_drawingColor));
+    const QRectF bounds = textItem->boundingRect();
+    textItem->setPos(scenePos - bounds.center());
+    textItem->setZValue(95.0);
+    m_scene.addItem(textItem);
+    m_textItems.append(textItem);
+    registerAnnotation(textItem);
+}
+
+void Carta::removeTextItems()
+{
+    for (QGraphicsSimpleTextItem *item : m_textItems)
+    {
+        if (!item)
+        {
+            continue;
+        }
+        unregisterAnnotation(item);
+        m_scene.removeItem(item);
+        delete item;
+    }
+    m_textItems.clear();
+}
+
+void Carta::removeStrokeItems()
+{
+    for (QGraphicsPathItem *item : m_strokeItems)
+    {
+        if (!item)
+        {
+            continue;
+        }
+        unregisterAnnotation(item);
+        m_scene.removeItem(item);
+        delete item;
+    }
+    m_strokeItems.clear();
+}
+
+void Carta::startStroke(const QPointF &scenePos)
+{
+    abortCurrentStroke();
+
+    auto *pathItem = new QGraphicsPathItem();
+    QPen pen(m_drawingColor);
+    pen.setWidth(m_strokeWidth);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    QColor color = m_drawingColor;
+    color.setAlphaF(std::clamp(m_strokeOpacity / 100.0, 0.0, 1.0));
+    pen.setColor(color);
+    pathItem->setPen(pen);
+    pathItem->setZValue(90.0);
+
+    m_currentStrokePath = QPainterPath(scenePos);
+    m_currentStrokePath.lineTo(scenePos);
+    pathItem->setPath(m_currentStrokePath);
+    m_scene.addItem(pathItem);
+    m_currentStroke = pathItem;
+    m_painting = true;
+}
+
+void Carta::extendStroke(const QPointF &scenePos)
+{
+    if (!m_currentStroke)
+    {
+        return;
+    }
+
+    if (scenePos == m_currentStrokePath.currentPosition())
+    {
+        return;
+    }
+
+    m_currentStrokePath.lineTo(scenePos);
+    m_currentStroke->setPath(m_currentStrokePath);
+}
+
+void Carta::finishStroke()
+{
+    if (!m_currentStroke)
+    {
+        m_painting = false;
+        return;
+    }
+
+    m_strokeItems.append(m_currentStroke);
+    registerAnnotation(m_currentStroke);
+    m_currentStroke = nullptr;
+    m_currentStrokePath = QPainterPath();
+    m_painting = false;
+}
+
+void Carta::abortCurrentStroke()
+{
+    if (!m_currentStroke)
+    {
+        m_currentStrokePath = QPainterPath();
+        m_painting = false;
+        return;
+    }
+
+    m_scene.removeItem(m_currentStroke);
+    delete m_currentStroke;
+    m_currentStroke = nullptr;
+    m_currentStrokePath = QPainterPath();
+    m_painting = false;
+}
+
+void Carta::eraseAt(const QPointF &scenePos)
+{
+    const QList<QGraphicsItem *> items = m_scene.items(scenePos, Qt::IntersectsItemShape, Qt::DescendingOrder);
+    for (QGraphicsItem *item : items)
+    {
+        if (removeAnnotationItem(item))
+        {
+            break;
+        }
+    }
+}
+
+bool Carta::removeAnnotationItem(QGraphicsItem *item)
+{
+    if (!item)
+    {
+        return false;
+    }
+
+    if (auto *textItem = qgraphicsitem_cast<QGraphicsSimpleTextItem *>(item))
+    {
+        if (!m_textItems.contains(textItem))
+        {
+            return false;
+        }
+        unregisterAnnotation(textItem);
+        m_textItems.removeAll(textItem);
+        m_scene.removeItem(textItem);
+        delete textItem;
+        return true;
+    }
+
+    if (auto *pathItem = qgraphicsitem_cast<QGraphicsPathItem *>(item))
+    {
+        if (!m_strokeItems.contains(pathItem))
+        {
+            return false;
+        }
+        unregisterAnnotation(pathItem);
+        m_strokeItems.removeAll(pathItem);
+        m_scene.removeItem(pathItem);
+        delete pathItem;
+        return true;
+    }
+
+    return false;
+}
+
+void Carta::registerAnnotation(QGraphicsItem *item)
+{
+    if (!item)
+    {
+        return;
+    }
+    m_annotationStack.removeAll(item);
+    m_annotationStack.append(item);
+}
+
+void Carta::unregisterAnnotation(QGraphicsItem *item)
+{
+    if (!item)
+    {
+        return;
+    }
+    m_annotationStack.removeAll(item);
 }

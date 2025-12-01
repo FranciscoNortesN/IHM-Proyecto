@@ -38,5 +38,6 @@ private:
     bool loadMapResource(const QString &resourcePath, const QString &title);
     bool loadMapFromFile(const QString &filePath);
     void handleOverlayDrag(const QPoint &delta);
+    void setupShortcuts();
 };
 #endif // MAINWINDOW_H

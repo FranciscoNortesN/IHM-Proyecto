@@ -12,8 +12,8 @@ struct MapToolDescriptor
 
 namespace MapToolMime
 {
-inline constexpr const char *ToolId = "application/x-navtrainer-tool-id";
-inline constexpr const char *ToolSource = "application/x-navtrainer-tool-source";
+    inline constexpr const char *ToolId = "application/x-navtrainer-tool-id";
+    inline constexpr const char *ToolSource = "application/x-navtrainer-tool-source";
 }
 
 #endif // MAPTOOLTYPES_H

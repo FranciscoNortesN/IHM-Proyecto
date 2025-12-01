@@ -5,11 +5,13 @@
 #include "mapoverlaypanel.h"
 
 #include <QDebug>
+#include <QColor>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QIODevice>
 #include <QMessageBox>
+#include <QShortcut>
 #include <QVBoxLayout>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -67,14 +69,70 @@ void MainWindow::setupOverlayPanel()
             this, &MainWindow::handleOverlayDrag);
     connect(m_overlayPanel, &MapOverlayPanel::changeMapRequested,
             this, &MainWindow::promptForMapChange);
+    connect(m_overlayPanel, &MapOverlayPanel::dragModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Drag);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::paintModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Paint);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::eraseModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Erase);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::textModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Text);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::colorPicked, this, [this](const QColor &color)
+            {
+        if (m_carta)
+        {
+            m_carta->setDrawingColor(color);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::strokeWidthChanged, this, [this](int value)
+            {
+        if (m_carta)
+        {
+            m_carta->setStrokeWidth(value);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::strokeOpacityChanged, this, [this](int value)
+            {
+        if (m_carta)
+        {
+            m_carta->setStrokeOpacity(value);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::undoRequested, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->undoLastAnnotation();
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::clearEditsRequested, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->clearUserAnnotations();
+        } });
 
     const QList<MapToolDescriptor> tools = {
         {QStringLiteral("tool_ruler"), tr("Regla"), QStringLiteral(":/assets/ruler.svg")},
-        {QStringLiteral("tool_protractor"), tr("Transportador"), QStringLiteral(":/assets/transportador.svg")}
-    };
+        {QStringLiteral("tool_protractor"), tr("Transportador"), QStringLiteral(":/assets/transportador.svg")}};
     m_overlayPanel->setToolDescriptors(tools);
 
     m_carta->setOverlayWidget(m_overlayPanel);
+    m_carta->setDrawingColor(m_overlayPanel->currentColor());
+
+    setupShortcuts();
 }
 
 bool MainWindow::applyOverlayStyle()
@@ -162,5 +220,58 @@ void MainWindow::handleOverlayDrag(const QPoint &delta)
     {
         m_carta->moveOverlayBy(delta);
     }
+}
 
+void MainWindow::setupShortcuts()
+{
+    auto bind = [this](const QKeySequence &sequence, auto &&handler)
+    {
+        QShortcut *shortcut = new QShortcut(sequence, this);
+        connect(shortcut, &QShortcut::activated, this, handler);
+    };
+
+    bind(QKeySequence(Qt::Key_D), [this]()
+         {
+        if (m_overlayPanel)
+        {
+            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Drag);
+        } });
+
+    bind(QKeySequence(Qt::Key_P), [this]()
+         {
+        if (m_overlayPanel)
+        {
+            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Paint);
+        } });
+
+    bind(QKeySequence(Qt::Key_E), [this]()
+         {
+        if (m_overlayPanel)
+        {
+            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Erase);
+        } });
+
+    bind(QKeySequence(Qt::Key_T), [this]()
+         {
+        if (m_overlayPanel)
+        {
+            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Text);
+        } });
+
+    bind(QKeySequence::Undo, [this]()
+         {
+        if (m_carta)
+        {
+            m_carta->undoLastAnnotation();
+        } });
+
+    bind(QKeySequence::Delete, [this]()
+         {
+        if (m_carta)
+        {
+            m_carta->clearUserAnnotations();
+        } });
+
+    bind(QKeySequence(Qt::CTRL | Qt::Key_O), [this]()
+         { promptForMapChange(); });
 }

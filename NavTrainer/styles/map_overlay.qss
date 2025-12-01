@@ -1,16 +1,5 @@
-#mapOverlayPanel {
-    background-color: rgba(6, 18, 30, 190);
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 35);
-}
-
-#overlayHeader {
-    background: transparent;
-}
-
 #overlayTitleCard {
     background-color: rgba(20, 40, 60, 230);
-    border-radius: 18px;
     color: #f6fbff;
     font-weight: 600;
 }
@@ -22,16 +11,14 @@
 
 #overlayToolsCard {
     background-color: rgba(13, 30, 46, 220);
-    border-radius: 18px;
     color: #dbe4f0;
 }
 
 #overlayChangeButton {
-    background-color: rgba(255, 255, 255, 220);
-    border-radius: 18px;
+    background-color: rgba(50, 60, 80, 220);
     border: none;
 }
 
 #overlayChangeButton:hover {
-    background-color: rgba(255, 255, 255, 255);
+    background-color: rgba(50, 60, 80, 240);
 }

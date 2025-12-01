@@ -1,9 +1,12 @@
 #ifndef CARTA_H
 #define CARTA_H
 
+#include <QColor>
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QHash>
+#include <QList>
+#include <QPainterPath>
 #include <QPoint>
 #include <QPointF>
 
@@ -20,6 +23,8 @@ class QDropEvent;
 class QMimeData;
 class QGraphicsItem;
 class MapToolItem;
+class QGraphicsSimpleTextItem;
+class QGraphicsPathItem;
 
 class Carta : public QGraphicsView
 {
@@ -29,6 +34,14 @@ class Carta : public QGraphicsView
 public:
     explicit Carta(QWidget *parent = nullptr);
 
+    enum class InteractionMode
+    {
+        Drag,
+        Paint,
+        Erase,
+        Text
+    };
+
     bool loadMap(const QString &filePath);
     bool setMapPixmap(const QPixmap &pixmap);
     void clearMap();
@@ -36,6 +49,14 @@ public:
     void setOverlayWidget(QWidget *widget);
     void moveOverlayBy(const QPoint &delta);
     void resetOverlayPosition();
+    void setInteractionMode(InteractionMode mode);
+    InteractionMode interactionMode() const { return m_interactionMode; }
+    void setDrawingColor(const QColor &color);
+    QColor drawingColor() const { return m_drawingColor; }
+    void setStrokeWidth(int width);
+    void setStrokeOpacity(int opacityPercent);
+    void clearUserAnnotations();
+    void undoLastAnnotation();
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
@@ -66,6 +87,17 @@ private:
     QHash<QString, MapToolItem *> m_activeToolItems;
     bool m_overlayMouseTransparent = false;
     static constexpr int ToolItemDataKey = 1;
+    QList<QGraphicsSimpleTextItem *> m_textItems;
+    QList<QGraphicsPathItem *> m_strokeItems;
+    QList<QGraphicsItem *> m_annotationStack;
+    QGraphicsPathItem *m_currentStroke = nullptr;
+    QPainterPath m_currentStrokePath;
+    InteractionMode m_interactionMode = InteractionMode::Drag;
+    QColor m_drawingColor = QColor(255, 204, 51);
+    int m_strokeWidth = 4;
+    int m_strokeOpacity = 85;
+    bool m_painting = false;
+    bool m_erasing = false;
 
     void applyScale(qreal factor);
     void anchorMapToSide();
@@ -86,6 +118,19 @@ private:
     void removeTool(const QString &toolId);
     bool overlayContainsSceneRect(const QRectF &rect) const;
     bool overlayContainsViewportPoint(const QPoint &point) const;
+    void handleTextClick(const QPointF &scenePos);
+    void removeTextItems();
+    void removeStrokeItems();
+    void startStroke(const QPointF &scenePos);
+    void extendStroke(const QPointF &scenePos);
+    void finishStroke();
+    void abortCurrentStroke();
+    void eraseAt(const QPointF &scenePos);
+    bool removeAnnotationItem(QGraphicsItem *item);
+    void registerAnnotation(QGraphicsItem *item);
+    void unregisterAnnotation(QGraphicsItem *item);
+    bool dispatchWheelEventToTool(QWheelEvent *event);
+    QPoint wheelEventViewportPos(const QWheelEvent *event) const;
 };
 
 #endif // CARTA_H
