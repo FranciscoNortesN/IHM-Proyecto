@@ -3,9 +3,12 @@
 
 #include <QMainWindow>
 
+class Carta;
+
 QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
+namespace Ui
+{
+    class MainWindow;
 }
 QT_END_NAMESPACE
 
@@ -19,5 +22,6 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    Carta *m_carta = nullptr;
 };
 #endif // MAINWINDOW_H

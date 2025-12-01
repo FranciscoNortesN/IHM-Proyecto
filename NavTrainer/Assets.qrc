@@ -1,0 +1,5 @@
+<RCC>
+	<qresource prefix="/assets">
+		<file>carta_nautica.jpg</file>
+	</qresource>
+</RCC>
