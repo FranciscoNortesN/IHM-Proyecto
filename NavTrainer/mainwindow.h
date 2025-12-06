@@ -24,6 +24,10 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+private slots:
+    void onProblemsButtonClicked();
+    void onUserButtonClicked();
+
 private:
     Ui::MainWindow *ui;
     Carta *m_carta = nullptr;
@@ -32,6 +36,7 @@ private:
 
     void setupMapView();
     void setupOverlayPanel();
+    void setupSidebarButtons();
     bool applyOverlayStyle();
     void updateMapTitle(const QString &title);
     void promptForMapChange();
@@ -39,5 +44,7 @@ private:
     bool loadMapFromFile(const QString &filePath);
     void handleOverlayDrag(const QPoint &delta);
     void setupShortcuts();
+    bool isSidebarCollapsed() const;
+    void toggleSidebar(int stackIndex);
 };
 #endif // MAINWINDOW_H
