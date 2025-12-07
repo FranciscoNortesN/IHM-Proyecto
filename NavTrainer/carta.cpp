@@ -5,7 +5,9 @@
 #include <QDragMoveEvent>
 #include <QDropEvent>
 #include <QFrame>
+#include <QGraphicsEllipseItem>
 #include <QGraphicsItem>
+#include <QGraphicsLineItem>
 #include <QGraphicsPathItem>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsRectItem>
@@ -140,26 +142,17 @@ protected:
         }
 
         setRotation(m_rotationDeg);
-        showAngleLabel();
+        displayMeasurement(QString::number(qRound(m_rotationDeg)) + QStringLiteral("°"));
         event->accept();
     }
 
-private:
-    QString m_toolId;
-    QPointer<Carta> m_view;
-    qreal m_rotationDeg = 0.0;
-    QGraphicsSimpleTextItem *m_angleLabel = nullptr;
-    QGraphicsRectItem *m_angleLabelBg = nullptr;
-    QTimer m_hideLabelTimer;
-
-    void showAngleLabel()
+    void displayMeasurement(const QString &text)
     {
         if (!m_angleLabel || !m_angleLabelBg)
         {
             return;
         }
 
-        const QString text = QString::number(qRound(m_rotationDeg)) + QStringLiteral("°");
         m_angleLabel->setText(text);
         const QRectF textRect = m_angleLabel->boundingRect();
         const QPointF center = boundingRect().center();
@@ -174,6 +167,218 @@ private:
         m_angleLabelBg->show();
         m_angleLabel->show();
         m_hideLabelTimer.start();
+    }
+
+    QString m_toolId;
+    QPointer<Carta> m_view;
+    qreal m_rotationDeg = 0.0;
+    QGraphicsSimpleTextItem *m_angleLabel = nullptr;
+    QGraphicsRectItem *m_angleLabelBg = nullptr;
+    QTimer m_hideLabelTimer;
+};
+
+class CompassToolItem : public MapToolItem
+{
+public:
+    CompassToolItem(const QString &toolId, const QString &resourcePath, Carta *view)
+        : MapToolItem(toolId, resourcePath, view)
+    {
+        const QRectF rect = boundingRect();
+        m_pivotLocal = QPointF(rect.left(), rect.center().y());
+        m_baseLegLength = std::max<qreal>(1.0, rect.width());
+        setTransformOriginPoint(m_pivotLocal);
+        setRotation(-90.0); // orient the leg vertically by default
+    }
+
+    ~CompassToolItem() override
+    {
+        discardArcPreview();
+    }
+
+protected:
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        MapToolItem::mousePressEvent(event);
+        if (!event || event->button() != Qt::LeftButton)
+        {
+            return;
+        }
+
+        const QPointF local = event->pos();
+        const QRectF rect = boundingRect();
+        const qreal threshold = rect.width() * 0.3;
+        if (local.x() <= rect.left() + threshold)
+        {
+            m_dragRegion = DragRegion::Pivot;
+            return;
+        }
+
+        m_dragRegion = DragRegion::Pencil;
+        beginArcDrag(event->scenePos());
+        event->accept();
+    }
+
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (m_dragRegion == DragRegion::Pencil && event)
+        {
+            updateArcDrag(event->scenePos());
+            event->accept();
+            return;
+        }
+
+        MapToolItem::mouseMoveEvent(event);
+    }
+
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (m_dragRegion == DragRegion::Pencil && event && event->button() == Qt::LeftButton)
+        {
+            finalizeArcDrag();
+            event->accept();
+        }
+        m_dragRegion = DragRegion::None;
+        MapToolItem::mouseReleaseEvent(event);
+    }
+
+private:
+    enum class DragRegion
+    {
+        None,
+        Pivot,
+        Pencil
+    };
+
+    DragRegion m_dragRegion = DragRegion::None;
+    QPointF m_pivotLocal;
+    QPointF m_arcPivotScenePos;
+    qreal m_baseLegLength = 1.0;
+    qreal m_startAngleDeg = 0.0;
+    qreal m_currentSpanDeg = 0.0;
+    qreal m_currentRadius = 0.0;
+    QGraphicsPathItem *m_arcPreview = nullptr;
+
+    void beginArcDrag(const QPointF &scenePos)
+    {
+        m_arcPivotScenePos = mapToScene(m_pivotLocal);
+        m_startAngleDeg = angleFromPivot(scenePos);
+        m_currentRadius = std::max<qreal>(8.0, QLineF(m_arcPivotScenePos, scenePos).length());
+        ensureArcPreview();
+        updateArcPreview(0.0);
+        displayMeasurement(QStringLiteral("0°"));
+    }
+
+    qreal angleFromPivot(const QPointF &scenePos) const
+    {
+        return QLineF(m_arcPivotScenePos, scenePos).angle();
+    }
+
+    void updateArcDrag(const QPointF &scenePos)
+    {
+        QLineF line(m_arcPivotScenePos, scenePos);
+        const qreal radius = std::max<qreal>(8.0, line.length());
+        m_currentRadius = radius;
+        if (m_baseLegLength > 0.0)
+        {
+            const qreal newScale = std::clamp(radius / m_baseLegLength, 0.6, 4.0);
+            setScale(newScale);
+        }
+
+        const qreal angle = angleFromPivot(scenePos);
+        const qreal adjustedRotation = 90.0 - angle;
+        m_rotationDeg = adjustedRotation;
+        setRotation(adjustedRotation);
+        m_currentSpanDeg = normalizeSpan(angle - m_startAngleDeg);
+        updateArcPreview(m_currentSpanDeg);
+        displayMeasurement(QString::number(qRound(m_currentSpanDeg)) + QStringLiteral("°"));
+    }
+
+    void finalizeArcDrag()
+    {
+        if (!m_view)
+        {
+            discardArcPreview();
+            return;
+        }
+
+        if (std::abs(m_currentSpanDeg) < 1.0)
+        {
+            discardArcPreview();
+            return;
+        }
+
+        m_view->addArcAnnotation(m_arcPivotScenePos, m_currentRadius, m_startAngleDeg, m_currentSpanDeg);
+        discardArcPreview();
+    }
+
+    void ensureArcPreview()
+    {
+        if (m_arcPreview)
+        {
+            return;
+        }
+
+        m_arcPreview = new QGraphicsPathItem();
+        QPen pen(Qt::white);
+        if (m_view)
+        {
+            pen.setColor(m_view->drawingColor());
+            pen.setWidth(std::max(1, m_view->strokeWidth()));
+        }
+        pen.setStyle(Qt::DashLine);
+        pen.setCapStyle(Qt::RoundCap);
+        pen.setJoinStyle(Qt::RoundJoin);
+        QColor color = pen.color();
+        color.setAlpha(180);
+        pen.setColor(color);
+        m_arcPreview->setPen(pen);
+        m_arcPreview->setZValue(88.0);
+        if (scene())
+        {
+            scene()->addItem(m_arcPreview);
+        }
+    }
+
+    void updateArcPreview(qreal spanDeg)
+    {
+        if (!m_arcPreview)
+        {
+            return;
+        }
+
+        QPainterPath path;
+        const QRectF rect(m_arcPivotScenePos.x() - m_currentRadius, m_arcPivotScenePos.y() - m_currentRadius,
+                          m_currentRadius * 2, m_currentRadius * 2);
+        path.arcMoveTo(rect, m_startAngleDeg);
+        path.arcTo(rect, m_startAngleDeg, spanDeg);
+        m_arcPreview->setPath(path);
+    }
+
+    void discardArcPreview()
+    {
+        if (!m_arcPreview)
+        {
+            return;
+        }
+        if (scene())
+        {
+            scene()->removeItem(m_arcPreview);
+        }
+        delete m_arcPreview;
+        m_arcPreview = nullptr;
+    }
+
+    static qreal normalizeSpan(qreal value)
+    {
+        while (value > 360.0)
+        {
+            value -= 360.0;
+        }
+        while (value < -360.0)
+        {
+            value += 360.0;
+        }
+        return value;
     }
 };
 
@@ -273,6 +478,11 @@ void Carta::setInteractionMode(InteractionMode mode)
         finishStroke();
     }
 
+    if (m_interactionMode == InteractionMode::Line && mode != InteractionMode::Line)
+    {
+        cancelLinePreview();
+    }
+
     if (mode != InteractionMode::Erase)
     {
         m_erasing = false;
@@ -336,9 +546,13 @@ void Carta::setStrokeOpacity(int opacityPercent)
 void Carta::clearUserAnnotations()
 {
     abortCurrentStroke();
+    cancelLinePreview();
     clearToolInstances();
     removeTextItems();
     removeStrokeItems();
+    removePointItems();
+    removeLineItems();
+    removeArcItems();
     m_annotationStack.clear();
     m_erasing = false;
 }
@@ -388,9 +602,13 @@ bool Carta::setMapPixmap(const QPixmap &pixmap)
 void Carta::clearMap()
 {
     abortCurrentStroke();
+    cancelLinePreview();
     clearToolInstances();
     removeTextItems();
     removeStrokeItems();
+    removePointItems();
+    removeLineItems();
+    removeArcItems();
     m_annotationStack.clear();
     m_erasing = false;
 
@@ -475,6 +693,14 @@ void Carta::mousePressEvent(QMouseEvent *event)
                 eraseAt(scenePos);
                 event->accept();
                 return;
+            case InteractionMode::Point:
+                handlePointClick(scenePos);
+                event->accept();
+                return;
+            case InteractionMode::Line:
+                handleLineClick(scenePos);
+                event->accept();
+                return;
             case InteractionMode::Drag:
                 m_panning = true;
                 m_lastMousePos = event->pos();
@@ -500,6 +726,13 @@ void Carta::mouseMoveEvent(QMouseEvent *event)
     if (m_erasing && (event->buttons() & Qt::LeftButton))
     {
         eraseAt(mapToScene(event->pos()));
+        event->accept();
+        return;
+    }
+
+    if (m_lineDrawing && m_interactionMode == InteractionMode::Line)
+    {
+        updateLinePreview(mapToScene(event->pos()));
         event->accept();
         return;
     }
@@ -792,7 +1025,15 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
         return true;
     }
 
-    auto *item = new MapToolItem(toolId, resourcePath, this);
+    MapToolItem *item = nullptr;
+    if (toolId == QLatin1String("tool_compass"))
+    {
+        item = new CompassToolItem(toolId, resourcePath, this);
+    }
+    else
+    {
+        item = new MapToolItem(toolId, resourcePath, this);
+    }
     if (!item->renderer() || !item->renderer()->isValid())
     {
         delete item;
@@ -800,7 +1041,10 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
     }
 
     const QRectF bounds = item->boundingRect();
-    item->setTransformOriginPoint(bounds.center());
+    if (toolId != QLatin1String("tool_compass"))
+    {
+        item->setTransformOriginPoint(bounds.center());
+    }
     item->setPos(scenePos - bounds.center());
 
     m_scene.addItem(item);
@@ -979,6 +1223,36 @@ void Carta::handleTextClick(const QPointF &scenePos)
     registerAnnotation(textItem);
 }
 
+void Carta::handlePointClick(const QPointF &scenePos)
+{
+    const qreal radius = std::max<qreal>(4.0, m_strokeWidth * 1.2);
+    auto *pointItem = new QGraphicsEllipseItem(-radius, -radius, radius * 2, radius * 2);
+    QColor fill = m_drawingColor;
+    fill.setAlphaF(std::clamp(m_strokeOpacity / 100.0, 0.0, 1.0));
+    pointItem->setBrush(QBrush(fill));
+    QPen pen(Qt::white);
+    pen.setWidth(std::max(1, m_strokeWidth / 2));
+    pen.setColor(fill.darker(150));
+    pointItem->setPen(pen);
+    pointItem->setPos(scenePos);
+    pointItem->setFlag(QGraphicsItem::ItemIsSelectable, true);
+    pointItem->setZValue(93.0);
+    m_scene.addItem(pointItem);
+    m_pointItems.append(pointItem);
+    registerAnnotation(pointItem);
+}
+
+void Carta::handleLineClick(const QPointF &scenePos)
+{
+    if (!m_lineDrawing)
+    {
+        startLineSegment(scenePos);
+        return;
+    }
+
+    finishLineSegment(scenePos);
+}
+
 void Carta::removeTextItems()
 {
     for (QGraphicsSimpleTextItem *item : m_textItems)
@@ -1007,6 +1281,151 @@ void Carta::removeStrokeItems()
         delete item;
     }
     m_strokeItems.clear();
+}
+
+void Carta::removePointItems()
+{
+    for (QGraphicsEllipseItem *item : m_pointItems)
+    {
+        if (!item)
+        {
+            continue;
+        }
+        unregisterAnnotation(item);
+        m_scene.removeItem(item);
+        delete item;
+    }
+    m_pointItems.clear();
+}
+
+void Carta::removeLineItems()
+{
+    for (QGraphicsLineItem *item : m_lineItems)
+    {
+        if (!item)
+        {
+            continue;
+        }
+        unregisterAnnotation(item);
+        m_scene.removeItem(item);
+        delete item;
+    }
+    m_lineItems.clear();
+}
+
+void Carta::removeArcItems()
+{
+    for (QGraphicsPathItem *item : m_arcItems)
+    {
+        if (!item)
+        {
+            continue;
+        }
+        unregisterAnnotation(item);
+        m_scene.removeItem(item);
+        delete item;
+    }
+    m_arcItems.clear();
+}
+
+void Carta::startLineSegment(const QPointF &scenePos)
+{
+    cancelLinePreview();
+    m_lineStartScenePos = scenePos;
+    auto *preview = new QGraphicsLineItem(QLineF(scenePos, scenePos));
+    QPen pen(m_drawingColor);
+    QColor color = m_drawingColor;
+    color.setAlphaF(0.7f);
+    pen.setColor(color);
+    pen.setWidth(std::max(1, m_strokeWidth));
+    pen.setStyle(Qt::DashLine);
+    pen.setCapStyle(Qt::RoundCap);
+    preview->setPen(pen);
+    preview->setZValue(89.0);
+    m_scene.addItem(preview);
+    m_linePreview = preview;
+    m_lineDrawing = true;
+}
+
+void Carta::updateLinePreview(const QPointF &scenePos)
+{
+    if (!m_linePreview)
+    {
+        return;
+    }
+
+    m_linePreview->setLine(QLineF(m_lineStartScenePos, scenePos));
+}
+
+void Carta::finishLineSegment(const QPointF &scenePos)
+{
+    if (!m_lineDrawing)
+    {
+        return;
+    }
+
+    const QLineF finalLine(m_lineStartScenePos, scenePos);
+    if (finalLine.length() < 2.0)
+    {
+        cancelLinePreview();
+        return;
+    }
+
+    auto *lineItem = new QGraphicsLineItem(finalLine);
+    QPen pen(m_drawingColor);
+    QColor color = m_drawingColor;
+    color.setAlphaF(std::clamp(m_strokeOpacity / 100.0, 0.0, 1.0));
+    pen.setColor(color);
+    pen.setWidth(std::max(1, m_strokeWidth));
+    pen.setCapStyle(Qt::RoundCap);
+    lineItem->setPen(pen);
+    lineItem->setZValue(93.0);
+    m_scene.addItem(lineItem);
+    m_lineItems.append(lineItem);
+    registerAnnotation(lineItem);
+    cancelLinePreview();
+}
+
+void Carta::cancelLinePreview()
+{
+    if (!m_linePreview)
+    {
+        m_lineDrawing = false;
+        return;
+    }
+
+    m_scene.removeItem(m_linePreview);
+    delete m_linePreview;
+    m_linePreview = nullptr;
+    m_lineDrawing = false;
+}
+
+QGraphicsPathItem *Carta::addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg)
+{
+    if (radius <= 0.0 || qFuzzyIsNull(spanAngleDeg))
+    {
+        return nullptr;
+    }
+
+    QPainterPath path;
+    const QRectF rect(center.x() - radius, center.y() - radius, radius * 2, radius * 2);
+    path.arcMoveTo(rect, startAngleDeg);
+    path.arcTo(rect, startAngleDeg, spanAngleDeg);
+
+    auto *arcItem = new QGraphicsPathItem(path);
+    QPen pen(m_drawingColor);
+    pen.setWidth(std::max(1, m_strokeWidth));
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    QColor color = m_drawingColor;
+    color.setAlphaF(std::clamp(m_strokeOpacity / 100.0, 0.0, 1.0));
+    pen.setColor(color);
+    arcItem->setPen(pen);
+    arcItem->setZValue(91.0);
+    m_scene.addItem(arcItem);
+    m_arcItems.append(arcItem);
+    registerAnnotation(arcItem);
+    return arcItem;
 }
 
 void Carta::startStroke(const QPointF &scenePos)
@@ -1111,17 +1530,53 @@ bool Carta::removeAnnotationItem(QGraphicsItem *item)
         return true;
     }
 
-    if (auto *pathItem = qgraphicsitem_cast<QGraphicsPathItem *>(item))
+    if (auto *ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem *>(item))
     {
-        if (!m_strokeItems.contains(pathItem))
+        if (!m_pointItems.contains(ellipseItem))
         {
             return false;
         }
-        unregisterAnnotation(pathItem);
-        m_strokeItems.removeAll(pathItem);
-        m_scene.removeItem(pathItem);
-        delete pathItem;
+        unregisterAnnotation(ellipseItem);
+        m_pointItems.removeAll(ellipseItem);
+        m_scene.removeItem(ellipseItem);
+        delete ellipseItem;
         return true;
+    }
+
+    if (auto *lineItem = qgraphicsitem_cast<QGraphicsLineItem *>(item))
+    {
+        if (!m_lineItems.contains(lineItem))
+        {
+            return false;
+        }
+        unregisterAnnotation(lineItem);
+        m_lineItems.removeAll(lineItem);
+        m_scene.removeItem(lineItem);
+        delete lineItem;
+        return true;
+    }
+
+    if (auto *pathItem = qgraphicsitem_cast<QGraphicsPathItem *>(item))
+    {
+        if (m_strokeItems.contains(pathItem))
+        {
+            unregisterAnnotation(pathItem);
+            m_strokeItems.removeAll(pathItem);
+            m_scene.removeItem(pathItem);
+            delete pathItem;
+            return true;
+        }
+
+        if (m_arcItems.contains(pathItem))
+        {
+            unregisterAnnotation(pathItem);
+            m_arcItems.removeAll(pathItem);
+            m_scene.removeItem(pathItem);
+            delete pathItem;
+            return true;
+        }
+
+        return false;
     }
 
     return false;

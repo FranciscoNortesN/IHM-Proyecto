@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
         ui->splitter->setCollapsible(1, true);  // Hacer que la barra lateral sea colapsable
     }
 
-    if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Carta náutica")))
+    if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Estrecho de Gibraltar")))
     {
         QMessageBox::warning(this, tr("Error"),
                              tr("No se pudo cargar el mapa embebido 'carta_nautica.jpg'."));
@@ -103,6 +103,18 @@ void MainWindow::setupOverlayPanel()
         {
             m_carta->setInteractionMode(Carta::InteractionMode::Text);
         } });
+    connect(m_overlayPanel, &MapOverlayPanel::pointModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Point);
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::lineModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Line);
+        } });
     connect(m_overlayPanel, &MapOverlayPanel::colorPicked, this, [this](const QColor &color)
             {
         if (m_carta)
@@ -136,7 +148,8 @@ void MainWindow::setupOverlayPanel()
 
     const QList<MapToolDescriptor> tools = {
         {QStringLiteral("tool_ruler"), tr("Regla"), QStringLiteral(":/assets/ruler.svg")},
-        {QStringLiteral("tool_protractor"), tr("Transportador"), QStringLiteral(":/assets/transportador.svg")}};
+        {QStringLiteral("tool_protractor"), tr("Transportador"), QStringLiteral(":/assets/transportador.svg")},
+        {QStringLiteral("tool_compass"), tr("Compás"), QStringLiteral(":/assets/compass_leg.svg")}};
     m_overlayPanel->setToolDescriptors(tools);
 
     m_carta->setOverlayWidget(m_overlayPanel);
@@ -266,6 +279,20 @@ void MainWindow::setupShortcuts()
         if (m_overlayPanel)
         {
             m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Text);
+        } });
+
+    bind(QKeySequence(Qt::Key_O), [this]()
+         {
+        if (m_overlayPanel)
+        {
+            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Point);
+        } });
+
+    bind(QKeySequence(Qt::Key_L), [this]()
+         {
+        if (m_overlayPanel)
+        {
+            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Line);
         } });
 
     bind(QKeySequence::Undo, [this]()

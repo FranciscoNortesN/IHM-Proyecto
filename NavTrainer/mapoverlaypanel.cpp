@@ -242,7 +242,7 @@ void MapOverlayPanel::buildUi()
 
     m_actionGridWidget = new QWidget(m_toolPane);
     m_actionGridWidget->setObjectName(QStringLiteral("overlayActionGrid"));
-    m_actionGridWidget->setMaximumWidth(250);
+    m_actionGridWidget->setMaximumWidth(360);
     m_actionGridLayout = new QGridLayout(m_actionGridWidget);
     m_actionGridLayout->setContentsMargins(0, 0, 0, 0);
     m_actionGridLayout->setHorizontalSpacing(8);
@@ -285,9 +285,12 @@ void MapOverlayPanel::buildActionGrid()
                                          QIcon(QStringLiteral(":/assets/icons/paint.svg")), Mode::Paint);
     m_eraseModeButton = createModeButton(QStringLiteral("actionEraseMode"), tr("Modo borrador (E)"),
                                          QIcon(QStringLiteral(":/assets/icons/erase.svg")), Mode::Erase);
+    m_pointModeButton = createModeButton(QStringLiteral("actionPointMode"), tr("Marcar puntos (O)"),
+                                         QIcon(QStringLiteral(":/assets/icons/point.svg")), Mode::Point);
+    m_lineModeButton = createModeButton(QStringLiteral("actionLineMode"), tr("Trazar líneas (L)"),
+                                        QIcon(QStringLiteral(":/assets/icons/line.svg")), Mode::Line);
     m_textModeButton = createModeButton(QStringLiteral("actionTextMode"), tr("Añadir texto (T)"),
                                         QIcon(QStringLiteral(":/assets/icons/text.svg")), Mode::Text);
-
     m_undoButton = makeActionButton(QStringLiteral("actionUndo"),
                                     QIcon(QStringLiteral(":/assets/icons/undo.svg")), tr("Deshacer (Ctrl+Z)"));
     m_settingsButton = makeActionButton(QStringLiteral("actionSettings"),
@@ -329,10 +332,13 @@ void MapOverlayPanel::buildActionGrid()
     placeButton(m_paintModeButton, 0, 1);
     placeButton(m_eraseModeButton, 0, 2);
     placeButton(m_textModeButton, 0, 3);
-    placeButton(m_undoButton, 1, 0);
-    placeButton(m_settingsButton, 1, 1);
+    placeButton(m_pointModeButton, 0, 4);
+
+    placeButton(m_lineModeButton, 1, 0);
+    placeButton(m_undoButton, 1, 1);
     placeButton(m_colorButton, 1, 2);
-    placeButton(m_clearButton, 1, 3);
+    placeButton(m_settingsButton, 1, 3);
+    placeButton(m_clearButton, 1, 4);
 
     setActiveMode(Mode::Drag);
 }
@@ -476,6 +482,12 @@ void MapOverlayPanel::setActiveMode(Mode mode)
         break;
     case Mode::Text:
         emit textModeSelected();
+        break;
+    case Mode::Point:
+        emit pointModeSelected();
+        break;
+    case Mode::Line:
+        emit lineModeSelected();
         break;
     }
 }
@@ -635,6 +647,10 @@ MapOverlayPanel::Mode MapOverlayPanel::idToMode(int id)
         return Mode::Erase;
     case Mode::Text:
         return Mode::Text;
+    case Mode::Point:
+        return Mode::Point;
+    case Mode::Line:
+        return Mode::Line;
     case Mode::Drag:
     default:
         return Mode::Drag;

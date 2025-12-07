@@ -23,13 +23,17 @@ class QDropEvent;
 class QMimeData;
 class QGraphicsItem;
 class MapToolItem;
+class CompassToolItem;
 class QGraphicsSimpleTextItem;
 class QGraphicsPathItem;
+class QGraphicsEllipseItem;
+class QGraphicsLineItem;
 
 class Carta : public QGraphicsView
 {
     Q_OBJECT
     friend class MapToolItem;
+    friend class CompassToolItem;
 
 public:
     explicit Carta(QWidget *parent = nullptr);
@@ -39,7 +43,9 @@ public:
         Drag,
         Paint,
         Erase,
-        Text
+        Text,
+        Point,
+        Line
     };
 
     bool loadMap(const QString &filePath);
@@ -52,11 +58,14 @@ public:
     void setInteractionMode(InteractionMode mode);
     InteractionMode interactionMode() const { return m_interactionMode; }
     void setDrawingColor(const QColor &color);
-    QColor drawingColor() const { return m_drawingColor; }
     void setStrokeWidth(int width);
     void setStrokeOpacity(int opacityPercent);
     void clearUserAnnotations();
     void undoLastAnnotation();
+    QGraphicsPathItem *addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg);
+    QColor drawingColor() const { return m_drawingColor; }
+    int strokeWidth() const { return m_strokeWidth; }
+    int strokeOpacity() const { return m_strokeOpacity; }
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
@@ -89,15 +98,21 @@ private:
     static constexpr int ToolItemDataKey = 1;
     QList<QGraphicsSimpleTextItem *> m_textItems;
     QList<QGraphicsPathItem *> m_strokeItems;
+    QList<QGraphicsEllipseItem *> m_pointItems;
+    QList<QGraphicsLineItem *> m_lineItems;
+    QList<QGraphicsPathItem *> m_arcItems;
     QList<QGraphicsItem *> m_annotationStack;
     QGraphicsPathItem *m_currentStroke = nullptr;
     QPainterPath m_currentStrokePath;
+    QGraphicsLineItem *m_linePreview = nullptr;
+    QPointF m_lineStartScenePos;
     InteractionMode m_interactionMode = InteractionMode::Drag;
     QColor m_drawingColor = QColor(255, 204, 51);
     int m_strokeWidth = 4;
     int m_strokeOpacity = 85;
     bool m_painting = false;
     bool m_erasing = false;
+    bool m_lineDrawing = false;
 
     void applyScale(qreal factor);
     void anchorMapToSide();
@@ -119,6 +134,8 @@ private:
     bool overlayContainsSceneRect(const QRectF &rect) const;
     bool overlayContainsViewportPoint(const QPoint &point) const;
     void handleTextClick(const QPointF &scenePos);
+    void handlePointClick(const QPointF &scenePos);
+    void handleLineClick(const QPointF &scenePos);
     void removeTextItems();
     void removeStrokeItems();
     void startStroke(const QPointF &scenePos);
@@ -131,6 +148,13 @@ private:
     void unregisterAnnotation(QGraphicsItem *item);
     bool dispatchWheelEventToTool(QWheelEvent *event);
     QPoint wheelEventViewportPos(const QWheelEvent *event) const;
+    void startLineSegment(const QPointF &scenePos);
+    void updateLinePreview(const QPointF &scenePos);
+    void finishLineSegment(const QPointF &scenePos);
+    void cancelLinePreview();
+    void removePointItems();
+    void removeLineItems();
+    void removeArcItems();
 };
 
 #endif // CARTA_H

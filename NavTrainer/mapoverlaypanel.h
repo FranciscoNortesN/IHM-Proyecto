@@ -36,7 +36,9 @@ public:
         Drag,
         Paint,
         Erase,
-        Text
+        Text,
+        Point,
+        Line
     };
 
     void setActiveMode(Mode mode);
@@ -52,6 +54,8 @@ signals:
     void paintModeSelected();
     void eraseModeSelected();
     void textModeSelected();
+    void pointModeSelected();
+    void lineModeSelected();
     void undoRequested();
     void clearEditsRequested();
     void colorPicked(const QColor &color);
@@ -85,6 +89,8 @@ private:
     QToolButton *m_paintModeButton = nullptr;
     QToolButton *m_eraseModeButton = nullptr;
     QToolButton *m_textModeButton = nullptr;
+    QToolButton *m_pointModeButton = nullptr;
+    QToolButton *m_lineModeButton = nullptr;
     QToolButton *m_undoButton = nullptr;
     QToolButton *m_settingsButton = nullptr;
     QToolButton *m_colorButton = nullptr;
