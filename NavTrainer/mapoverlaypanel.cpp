@@ -358,8 +358,8 @@ void MapOverlayPanel::createSettingsMenu()
 
     auto *thicknessLabel = new QLabel(tr("Grosor"), container);
     m_thicknessSlider = new QSlider(Qt::Horizontal, container);
-    m_thicknessSlider->setRange(1, 12);
-    m_thicknessSlider->setValue(4);
+    m_thicknessSlider->setRange(2, 24);
+    m_thicknessSlider->setValue(8);
 
     auto *opacityLabel = new QLabel(tr("Opacidad"), container);
     m_opacitySlider = new QSlider(Qt::Horizontal, container);

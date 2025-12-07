@@ -28,6 +28,9 @@ class QGraphicsSimpleTextItem;
 class QGraphicsPathItem;
 class QGraphicsEllipseItem;
 class QGraphicsLineItem;
+class QContextMenuEvent;
+class QKeyEvent;
+class QFocusEvent;
 
 class Carta : public QGraphicsView
 {
@@ -77,6 +80,11 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
+    void focusInEvent(QFocusEvent *event) override;
+    void focusOutEvent(QFocusEvent *event) override;
 
 private:
     QGraphicsScene m_scene;
@@ -108,11 +116,13 @@ private:
     QPointF m_lineStartScenePos;
     InteractionMode m_interactionMode = InteractionMode::Drag;
     QColor m_drawingColor = QColor(255, 204, 51);
-    int m_strokeWidth = 4;
+    int m_strokeWidth = 8;
     int m_strokeOpacity = 85;
     bool m_painting = false;
     bool m_erasing = false;
     bool m_lineDrawing = false;
+    bool m_shiftPressed = false;
+    QList<QGraphicsLineItem *> m_projectionLines;
 
     void applyScale(qreal factor);
     void anchorMapToSide();
@@ -155,6 +165,11 @@ private:
     void removePointItems();
     void removeLineItems();
     void removeArcItems();
+    void showAnnotationContextMenu(QGraphicsItem *item, const QPoint &globalPos);
+    void changeAnnotationColor(QGraphicsItem *item, const QColor &newColor);
+    bool isAnnotationItem(QGraphicsItem *item) const;
+    void updateProjectionLines();
+    void clearProjectionLines();
 };
 
 #endif // CARTA_H

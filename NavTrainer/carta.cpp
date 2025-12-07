@@ -33,6 +33,11 @@
 #include <QLineEdit>
 #include <QLineF>
 #include <QInputDialog>
+#include <QContextMenuEvent>
+#include <QKeyEvent>
+#include <QMenu>
+#include <QColorDialog>
+#include <QApplication>
 #include <algorithm>
 #include <cmath>
 
@@ -672,6 +677,8 @@ void Carta::wheelEvent(QWheelEvent *event)
 
 void Carta::mousePressEvent(QMouseEvent *event)
 {
+    setFocus();
+    
     if (event->button() == Qt::LeftButton && m_mapItem)
     {
         QGraphicsItem *clickedItem = itemAt(event->pos());
@@ -1211,7 +1218,7 @@ void Carta::handleTextClick(const QPointF &scenePos)
 
     auto *textItem = new QGraphicsSimpleTextItem(text);
     QFont font = textItem->font();
-    font.setPointSize(26);
+    font.setPointSize(36);
     font.setWeight(QFont::DemiBold);
     textItem->setFont(font);
     textItem->setBrush(QBrush(m_drawingColor));
@@ -1600,3 +1607,254 @@ void Carta::unregisterAnnotation(QGraphicsItem *item)
     }
     m_annotationStack.removeAll(item);
 }
+
+void Carta::contextMenuEvent(QContextMenuEvent *event)
+{
+    if (!event)
+    {
+        QGraphicsView::contextMenuEvent(event);
+        return;
+    }
+
+    QGraphicsItem *item = itemAt(event->pos());
+    if (item && isAnnotationItem(item) && !isToolItem(item))
+    {
+        showAnnotationContextMenu(item, event->globalPos());
+        event->accept();
+        return;
+    }
+
+    QGraphicsView::contextMenuEvent(event);
+}
+
+void Carta::keyPressEvent(QKeyEvent *event)
+{
+    if (!event)
+    {
+        QGraphicsView::keyPressEvent(event);
+        return;
+    }
+
+    if (event->key() == Qt::Key_Shift && !event->isAutoRepeat() && !m_shiftPressed)
+    {
+        m_shiftPressed = true;
+        updateProjectionLines();
+        event->accept();
+        return;
+    }
+
+    QGraphicsView::keyPressEvent(event);
+}
+
+void Carta::keyReleaseEvent(QKeyEvent *event)
+{
+    if (!event)
+    {
+        QGraphicsView::keyReleaseEvent(event);
+        return;
+    }
+
+    if (event->key() == Qt::Key_Shift && !event->isAutoRepeat() && m_shiftPressed)
+    {
+        m_shiftPressed = false;
+        clearProjectionLines();
+        event->accept();
+        return;
+    }
+
+    QGraphicsView::keyReleaseEvent(event);
+}
+
+void Carta::focusInEvent(QFocusEvent *event)
+{
+    QGraphicsView::focusInEvent(event);
+    if (QApplication::keyboardModifiers() & Qt::ShiftModifier)
+    {
+        if (!m_shiftPressed)
+        {
+            m_shiftPressed = true;
+            updateProjectionLines();
+        }
+    }
+}
+
+void Carta::focusOutEvent(QFocusEvent *event)
+{
+    QGraphicsView::focusOutEvent(event);
+    if (m_shiftPressed)
+    {
+        m_shiftPressed = false;
+        clearProjectionLines();
+    }
+}
+
+void Carta::showAnnotationContextMenu(QGraphicsItem *item, const QPoint &globalPos)
+{
+    if (!item)
+    {
+        return;
+    }
+
+    QMenu menu(this);
+    QAction *changeColorAction = menu.addAction(tr("Cambiar color..."));
+
+    QAction *selected = menu.exec(globalPos);
+    if (selected == changeColorAction)
+    {
+        QColor currentColor = m_drawingColor;
+
+        if (auto *textItem = qgraphicsitem_cast<QGraphicsSimpleTextItem *>(item))
+        {
+            currentColor = textItem->brush().color();
+        }
+        else if (auto *ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem *>(item))
+        {
+            currentColor = ellipseItem->brush().color();
+        }
+        else if (auto *lineItem = qgraphicsitem_cast<QGraphicsLineItem *>(item))
+        {
+            currentColor = lineItem->pen().color();
+        }
+        else if (auto *pathItem = qgraphicsitem_cast<QGraphicsPathItem *>(item))
+        {
+            currentColor = pathItem->pen().color();
+        }
+
+        const QColor newColor = QColorDialog::getColor(currentColor, this, tr("Seleccionar color"),
+                                                        QColorDialog::ShowAlphaChannel);
+        if (newColor.isValid())
+        {
+            changeAnnotationColor(item, newColor);
+        }
+    }
+}
+
+void Carta::changeAnnotationColor(QGraphicsItem *item, const QColor &newColor)
+{
+    if (!item || !newColor.isValid())
+    {
+        return;
+    }
+
+    if (auto *textItem = qgraphicsitem_cast<QGraphicsSimpleTextItem *>(item))
+    {
+        textItem->setBrush(QBrush(newColor));
+        return;
+    }
+
+    if (auto *ellipseItem = qgraphicsitem_cast<QGraphicsEllipseItem *>(item))
+    {
+        QColor fillColor = newColor;
+        ellipseItem->setBrush(QBrush(fillColor));
+        QPen pen = ellipseItem->pen();
+        pen.setColor(fillColor.darker(150));
+        ellipseItem->setPen(pen);
+        return;
+    }
+
+    if (auto *lineItem = qgraphicsitem_cast<QGraphicsLineItem *>(item))
+    {
+        QPen pen = lineItem->pen();
+        pen.setColor(newColor);
+        lineItem->setPen(pen);
+        return;
+    }
+
+    if (auto *pathItem = qgraphicsitem_cast<QGraphicsPathItem *>(item))
+    {
+        QPen pen = pathItem->pen();
+        pen.setColor(newColor);
+        pathItem->setPen(pen);
+        return;
+    }
+}
+
+bool Carta::isAnnotationItem(QGraphicsItem *item) const
+{
+    if (!item)
+    {
+        return false;
+    }
+
+    if (qgraphicsitem_cast<QGraphicsSimpleTextItem *>(item))
+    {
+        return m_textItems.contains(static_cast<QGraphicsSimpleTextItem *>(item));
+    }
+
+    if (qgraphicsitem_cast<QGraphicsEllipseItem *>(item))
+    {
+        return m_pointItems.contains(static_cast<QGraphicsEllipseItem *>(item));
+    }
+
+    if (qgraphicsitem_cast<QGraphicsLineItem *>(item))
+    {
+        return m_lineItems.contains(static_cast<QGraphicsLineItem *>(item));
+    }
+
+    if (qgraphicsitem_cast<QGraphicsPathItem *>(item))
+    {
+        QGraphicsPathItem *pathItem = static_cast<QGraphicsPathItem *>(item);
+        return m_strokeItems.contains(pathItem) || m_arcItems.contains(pathItem);
+    }
+
+    return false;
+}
+
+void Carta::updateProjectionLines()
+{
+    clearProjectionLines();
+
+    if (!m_mapItem || !scene())
+    {
+        return;
+    }
+
+    const QRectF sceneRect = scene()->sceneRect();
+    if (!sceneRect.isValid())
+    {
+        return;
+    }
+
+    for (QGraphicsEllipseItem *pointItem : m_pointItems)
+    {
+        if (!pointItem)
+        {
+            continue;
+        }
+
+        const QPointF center = pointItem->scenePos();
+
+        auto *hLine = new QGraphicsLineItem(sceneRect.left(), center.y(), sceneRect.right(), center.y());
+        QPen pen(Qt::white);
+        pen.setWidth(1);
+        pen.setStyle(Qt::DashLine);
+        QColor color = Qt::white;
+        color.setAlpha(120);
+        pen.setColor(color);
+        hLine->setPen(pen);
+        hLine->setZValue(85.0);
+        m_scene.addItem(hLine);
+        m_projectionLines.append(hLine);
+
+        auto *vLine = new QGraphicsLineItem(center.x(), sceneRect.top(), center.x(), sceneRect.bottom());
+        vLine->setPen(pen);
+        vLine->setZValue(85.0);
+        m_scene.addItem(vLine);
+        m_projectionLines.append(vLine);
+    }
+}
+
+void Carta::clearProjectionLines()
+{
+    for (QGraphicsLineItem *line : m_projectionLines)
+    {
+        if (!line)
+        {
+            continue;
+        }
+        m_scene.removeItem(line);
+        delete line;
+    }
+    m_projectionLines.clear();
+}
+
