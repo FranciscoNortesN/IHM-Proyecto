@@ -24,6 +24,7 @@ class QMimeData;
 class QGraphicsItem;
 class MapToolItem;
 class CompassToolItem;
+class RulerToolItem;
 class QGraphicsSimpleTextItem;
 class QGraphicsPathItem;
 class QGraphicsEllipseItem;
@@ -37,6 +38,7 @@ class Carta : public QGraphicsView
     Q_OBJECT
     friend class MapToolItem;
     friend class CompassToolItem;
+    friend class RulerToolItem;
 
 public:
     explicit Carta(QWidget *parent = nullptr);
@@ -65,6 +67,7 @@ public:
     void setStrokeOpacity(int opacityPercent);
     void clearUserAnnotations();
     void undoLastAnnotation();
+    void setProjectionLinesVisible(bool visible);
     QGraphicsPathItem *addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg);
     QColor drawingColor() const { return m_drawingColor; }
     int strokeWidth() const { return m_strokeWidth; }
@@ -85,9 +88,12 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
 private:
     QGraphicsScene m_scene;
+    QGraphicsScene m_toolScene;
     QGraphicsPixmapItem *m_mapItem = nullptr;
     bool m_panning = false;
     QPoint m_lastMousePos;
@@ -98,7 +104,7 @@ private:
     bool m_userHasZoomed = false;
     bool m_pendingFitToHeight = false;
     QWidget *m_overlayWidget = nullptr;
-    QPointF m_overlayScenePos;
+    QPoint m_overlayViewportPos;
     bool m_overlayUserMoved = false;
     int m_overlayMargin = 18;
     QHash<QString, MapToolItem *> m_activeToolItems;
@@ -121,8 +127,14 @@ private:
     bool m_painting = false;
     bool m_erasing = false;
     bool m_lineDrawing = false;
-    bool m_shiftPressed = false;
+    bool m_showProjectionLines = false;
     QList<QGraphicsLineItem *> m_projectionLines;
+    QHash<MapToolItem *, QPointF> m_toolViewportPos;
+    bool m_toolDragInProgress = false;
+    MapToolItem *m_draggedToolItem = nullptr;
+    RulerToolItem *m_activeRuler = nullptr;
+    QPointF m_toolDragOffset;
+    bool m_repositioningInForeground = false;
 
     void applyScale(qreal factor);
     void anchorMapToSide();
@@ -170,6 +182,13 @@ private:
     bool isAnnotationItem(QGraphicsItem *item) const;
     void updateProjectionLines();
     void clearProjectionLines();
+    MapToolItem *rulerItem() const;
+    bool pointHitsRuler(const QPointF &scenePos, MapToolItem *ruler) const;
+    QPointF rulerDirection(MapToolItem *ruler) const;
+    QPointF applyRulerSnap(const QPointF &prevPoint, const QPointF &candidate) const;
+    void storeToolViewportPos(MapToolItem *item);
+    void repositionToolsToViewport();
+    void drawForeground(QPainter *painter, const QRectF &rect) override;
 };
 
 #endif // CARTA_H

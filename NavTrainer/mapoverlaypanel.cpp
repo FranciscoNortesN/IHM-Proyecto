@@ -26,6 +26,7 @@
 #include <QWidgetAction>
 
 #include <QSizePolicy>
+#include <algorithm>
 
 namespace
 {
@@ -180,13 +181,13 @@ void MapOverlayPanel::buildUi()
     panelLayout->setContentsMargins(0, 0, 0, 0);
     panelLayout->setSpacing(0); // remove gap between header/tool area
 
-    auto *headerRow = new QWidget(this);
-    headerRow->setObjectName(QStringLiteral("overlayHeader"));
-    auto *headerLayout = new QHBoxLayout(headerRow);
+    m_headerRow = new QWidget(this);
+    m_headerRow->setObjectName(QStringLiteral("overlayHeader"));
+    auto *headerLayout = new QHBoxLayout(m_headerRow);
     headerLayout->setContentsMargins(0, 0, 0, 0);
     headerLayout->setSpacing(0); // title + folder touch each other
 
-    QWidget *titleCard = new QWidget(headerRow);
+    QWidget *titleCard = new QWidget(m_headerRow);
     titleCard->setObjectName(QStringLiteral("overlayTitleCard"));
     titleCard->setMinimumHeight(50);
     titleCard->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -203,7 +204,7 @@ void MapOverlayPanel::buildUi()
     m_titleText = m_titleLabel->text();
     m_titleLabel->setToolTip(m_titleText);
 
-    m_changeButton = new QToolButton(headerRow);
+    m_changeButton = new QToolButton(m_headerRow);
     m_changeButton->setObjectName(QStringLiteral("overlayChangeButton"));
     m_changeButton->setFixedSize(50, 50);
     m_changeButton->setIcon(QIcon(QStringLiteral(":/assets/icons/folder.svg")));
@@ -214,9 +215,9 @@ void MapOverlayPanel::buildUi()
 
     headerLayout->addWidget(titleCard, 0);
     headerLayout->addWidget(m_changeButton, 0, Qt::AlignTop);
-    headerLayout->addStretch(1); // leftover width becomes empty, not title
+    headerLayout->addStretch(1);
 
-    panelLayout->addWidget(headerRow, 0);
+    panelLayout->addWidget(m_headerRow, 0);
 
     m_toolsCard = new QWidget(this);
     m_toolsCard->setObjectName(QStringLiteral("overlayToolsCard"));
@@ -257,7 +258,7 @@ void MapOverlayPanel::buildUi()
 
     buildActionGrid();
 
-    registerDragHandle(headerRow);
+    registerDragHandle(m_headerRow);
     registerDragHandle(titleCard);
 }
 
@@ -287,12 +288,12 @@ void MapOverlayPanel::buildActionGrid()
                                          QIcon(QStringLiteral(":/assets/icons/erase.svg")), Mode::Erase);
     m_pointModeButton = createModeButton(QStringLiteral("actionPointMode"), tr("Marcar puntos (O)"),
                                          QIcon(QStringLiteral(":/assets/icons/point.svg")), Mode::Point);
-    m_lineModeButton = createModeButton(QStringLiteral("actionLineMode"), tr("Trazar líneas (L)"),
-                                        QIcon(QStringLiteral(":/assets/icons/line.svg")), Mode::Line);
     m_textModeButton = createModeButton(QStringLiteral("actionTextMode"), tr("Añadir texto (T)"),
                                         QIcon(QStringLiteral(":/assets/icons/text.svg")), Mode::Text);
     m_undoButton = makeActionButton(QStringLiteral("actionUndo"),
                                     QIcon(QStringLiteral(":/assets/icons/undo.svg")), tr("Deshacer (Ctrl+Z)"));
+    m_gridButton = makeActionButton(QStringLiteral("actionGrid"),
+                                    QIcon(QStringLiteral(":/assets/icons/grid.svg")), tr("Mostrar proyecciones"), true);
     m_settingsButton = makeActionButton(QStringLiteral("actionSettings"),
                                         QIcon(QStringLiteral(":/assets/icons/settings.svg")), tr("Ajustes"));
     m_colorButton = makeActionButton(QStringLiteral("actionColor"),
@@ -306,6 +307,7 @@ void MapOverlayPanel::buildActionGrid()
 
     connect(m_modeButtonGroup, &QButtonGroup::idClicked, this, &MapOverlayPanel::handleModeButtonClicked);
     connect(m_undoButton, &QToolButton::clicked, this, &MapOverlayPanel::undoRequested);
+    connect(m_gridButton, &QToolButton::toggled, this, &MapOverlayPanel::gridToggled);
     connect(m_clearButton, &QToolButton::clicked, this, &MapOverlayPanel::clearEditsRequested);
     connect(m_colorButton, &QToolButton::clicked, this, [this]()
             {
@@ -334,8 +336,8 @@ void MapOverlayPanel::buildActionGrid()
     placeButton(m_textModeButton, 0, 3);
     placeButton(m_pointModeButton, 0, 4);
 
-    placeButton(m_lineModeButton, 1, 0);
-    placeButton(m_undoButton, 1, 1);
+    placeButton(m_undoButton, 1, 0);
+    placeButton(m_gridButton, 1, 1);
     placeButton(m_colorButton, 1, 2);
     placeButton(m_settingsButton, 1, 3);
     placeButton(m_clearButton, 1, 4);
@@ -447,6 +449,19 @@ void MapOverlayPanel::updateTitleElision()
     m_titleLabel->setText(elided);
 }
 
+int MapOverlayPanel::minimumVisibleHeight() const
+{
+    constexpr int kFallbackHeight = 48;
+    if (!m_headerRow)
+    {
+        return kFallbackHeight;
+    }
+
+    const int measured = m_headerRow->isVisible() ? m_headerRow->height()
+                                                  : m_headerRow->sizeHint().height();
+    return std::max(measured, kFallbackHeight);
+}
+
 void MapOverlayPanel::setToolDescriptors(const QList<MapToolDescriptor> &descriptors)
 {
     m_toolDescriptors = descriptors;
@@ -487,7 +502,7 @@ void MapOverlayPanel::setActiveMode(Mode mode)
         emit pointModeSelected();
         break;
     case Mode::Line:
-        emit lineModeSelected();
+        // Line mode removed; no action
         break;
     }
 }
@@ -649,8 +664,6 @@ MapOverlayPanel::Mode MapOverlayPanel::idToMode(int id)
         return Mode::Text;
     case Mode::Point:
         return Mode::Point;
-    case Mode::Line:
-        return Mode::Line;
     case Mode::Drag:
     default:
         return Mode::Drag;

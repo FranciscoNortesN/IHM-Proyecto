@@ -15,5 +15,7 @@
 		<file>icons/point.svg</file>
 		<file>icons/line.svg</file>
 		<file>icons/avatar-default.svg</file>
+		<file>icons/folder.svg</file>
+		<file>icons/grid.svg</file>
 	</qresource>
 </RCC>

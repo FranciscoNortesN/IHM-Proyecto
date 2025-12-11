@@ -46,6 +46,7 @@ public:
     void setCurrentColor(const QColor &color);
     QColor currentColor() const { return m_currentColor; }
     void setPaintSettings(int thickness, int opacityPercent);
+    int minimumVisibleHeight() const;
 
 signals:
     void dragDeltaRequested(const QPoint &delta);
@@ -55,10 +56,10 @@ signals:
     void eraseModeSelected();
     void textModeSelected();
     void pointModeSelected();
-    void lineModeSelected();
     void undoRequested();
     void clearEditsRequested();
     void colorPicked(const QColor &color);
+    void gridToggled(bool enabled);
     void strokeWidthChanged(int width);
     void strokeOpacityChanged(int percent);
 
@@ -70,6 +71,7 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
 private:
+    QWidget *m_headerRow = nullptr;
     QLabel *m_titleLabel = nullptr;
     QToolButton *m_changeButton = nullptr;
     QWidget *m_toolsCard = nullptr;
@@ -90,8 +92,8 @@ private:
     QToolButton *m_eraseModeButton = nullptr;
     QToolButton *m_textModeButton = nullptr;
     QToolButton *m_pointModeButton = nullptr;
-    QToolButton *m_lineModeButton = nullptr;
     QToolButton *m_undoButton = nullptr;
+    QToolButton *m_gridButton = nullptr;
     QToolButton *m_settingsButton = nullptr;
     QToolButton *m_colorButton = nullptr;
     QToolButton *m_clearButton = nullptr;

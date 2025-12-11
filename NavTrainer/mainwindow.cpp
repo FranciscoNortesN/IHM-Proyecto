@@ -27,9 +27,9 @@ MainWindow::MainWindow(QWidget *parent)
     if (ui->splitter)
     {
         QList<int> sizes;
-        sizes << ui->splitter->width() << 0;  // Mapa ocupa todo el ancho, sidebar colapsada
+        sizes << ui->splitter->width() << 0; // Mapa ocupa todo el ancho, sidebar colapsada
         ui->splitter->setSizes(sizes);
-        ui->splitter->setCollapsible(1, true);  // Hacer que la barra lateral sea colapsable
+        ui->splitter->setCollapsible(1, true); // Hacer que la barra lateral sea colapsable
     }
 
     if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Estrecho de Gibraltar")))
@@ -109,12 +109,6 @@ void MainWindow::setupOverlayPanel()
         {
             m_carta->setInteractionMode(Carta::InteractionMode::Point);
         } });
-    connect(m_overlayPanel, &MapOverlayPanel::lineModeSelected, this, [this]()
-            {
-        if (m_carta)
-        {
-            m_carta->setInteractionMode(Carta::InteractionMode::Line);
-        } });
     connect(m_overlayPanel, &MapOverlayPanel::colorPicked, this, [this](const QColor &color)
             {
         if (m_carta)
@@ -144,6 +138,12 @@ void MainWindow::setupOverlayPanel()
         if (m_carta)
         {
             m_carta->clearUserAnnotations();
+        } });
+    connect(m_overlayPanel, &MapOverlayPanel::gridToggled, this, [this](bool enabled)
+            {
+        if (m_carta)
+        {
+            m_carta->setProjectionLinesVisible(enabled);
         } });
 
     const QList<MapToolDescriptor> tools = {
@@ -288,13 +288,6 @@ void MainWindow::setupShortcuts()
             m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Point);
         } });
 
-    bind(QKeySequence(Qt::Key_L), [this]()
-         {
-        if (m_overlayPanel)
-        {
-            m_overlayPanel->setActiveMode(MapOverlayPanel::Mode::Line);
-        } });
-
     bind(QKeySequence::Undo, [this]()
          {
         if (m_carta)
@@ -323,7 +316,7 @@ bool MainWindow::isSidebarCollapsed() const
 {
     if (!ui->splitter)
         return true;
-    
+
     QList<int> sizes = ui->splitter->sizes();
     return sizes.size() > 1 && sizes[1] == 0;
 }
@@ -360,10 +353,10 @@ void MainWindow::toggleSidebar(int stackIndex)
 
 void MainWindow::onProblemsButtonClicked()
 {
-    toggleSidebar(1);  // problem_space está en el índice 1
+    toggleSidebar(1); // problem_space está en el índice 1
 }
 
 void MainWindow::onUserButtonClicked()
 {
-    toggleSidebar(0);  // user_space está en el índice 0
+    toggleSidebar(0); // user_space está en el índice 0
 }

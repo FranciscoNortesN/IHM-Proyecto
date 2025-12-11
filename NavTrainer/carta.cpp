@@ -1,4 +1,5 @@
 #include "carta.h"
+#include "mapoverlaypanel.h"
 #include "maptooltypes.h"
 
 #include <QDragEnterEvent>
@@ -24,6 +25,7 @@
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QSizePolicy>
+#include <QTransform>
 #include <QtSvg/qsvgrenderer.h>
 #include <QPen>
 #include <QWheelEvent>
@@ -44,11 +46,14 @@
 class MapToolItem : public QGraphicsSvgItem
 {
 public:
+    static constexpr qreal kToolSceneScale = 1.0 / 6.0;
+
     MapToolItem(const QString &toolId, const QString &resourcePath, Carta *view)
         : QGraphicsSvgItem(resourcePath), m_toolId(toolId), m_view(view)
     {
         setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemIsSelectable |
                  QGraphicsItem::ItemSendsGeometryChanges);
+        setScale(kToolSceneScale);
         setAcceptedMouseButtons(Qt::LeftButton);
         setZValue(100.0);
         setData(Carta::ToolItemDataKey, true);
@@ -60,13 +65,11 @@ public:
         font.setBold(true);
         font.setPointSizeF(font.pointSizeF() + 2);
         m_angleLabel->setFont(font);
-        m_angleLabel->setFlag(QGraphicsItem::ItemIgnoresTransformations);
         m_angleLabel->hide();
 
         m_angleLabelBg = new QGraphicsRectItem(QRectF(0, 0, 0, 0), this);
         m_angleLabelBg->setBrush(QColor(0, 0, 0, 180));
         m_angleLabelBg->setPen(Qt::NoPen);
-        m_angleLabelBg->setFlag(QGraphicsItem::ItemIgnoresTransformations);
         m_angleLabelBg->setZValue(m_angleLabel->zValue() - 0.1);
         m_angleLabelBg->hide();
 
@@ -123,15 +126,7 @@ protected:
             return;
         }
 
-        const QPointF localPos = event->pos();
-        const QPointF center = boundingRect().center();
-        const qreal radius = boundingRect().width() * 0.25;
-        if (QLineF(localPos, center).length() > radius)
-        {
-            QGraphicsSvgItem::wheelEvent(event);
-            return;
-        }
-
+        // Accept wheel anywhere on the tool, not just center
         const int deltaValue = event->delta();
         if (deltaValue == 0)
         {
@@ -139,7 +134,8 @@ protected:
             return;
         }
 
-        const qreal degrees = static_cast<qreal>(deltaValue) / 8.0; // Qt delivers eighths of a degree
+        // Invert the rotation direction for more intuitive control
+        const qreal degrees = -static_cast<qreal>(deltaValue) / 8.0;
         m_rotationDeg = std::fmod(m_rotationDeg + degrees, 360.0);
         if (m_rotationDeg < 0)
         {
@@ -147,7 +143,14 @@ protected:
         }
 
         setRotation(m_rotationDeg);
-        displayMeasurement(QString::number(qRound(m_rotationDeg)) + QStringLiteral("°"));
+        
+        // Force immediate visual update
+        update();
+        if (scene())
+        {
+            scene()->update();
+        }
+        
         event->accept();
     }
 
@@ -188,11 +191,21 @@ public:
     CompassToolItem(const QString &toolId, const QString &resourcePath, Carta *view)
         : MapToolItem(toolId, resourcePath, view)
     {
-        const QRectF rect = boundingRect();
-        m_pivotLocal = QPointF(rect.left(), rect.center().y());
-        m_baseLegLength = std::max<qreal>(1.0, rect.width());
-        setTransformOriginPoint(m_pivotLocal);
-        setRotation(-90.0); // orient the leg vertically by default
+        Q_UNUSED(resourcePath);
+        setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
+        setAcceptHoverEvents(true);  // Enable hover for cursor feedback
+        setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
+        setCursor(Qt::ArrowCursor);
+        
+        // Override the base class scale - compass needs to be larger
+        setScale(1.0);
+        
+        // Initialize compass geometry - larger for better visibility
+        m_legLength = 180.0;
+        m_legWidth = 12.0;
+        m_hingeRadius = 18.0;
+        m_pivotRotationDeg = -60.0;  // Pivot leg angle
+        m_pencilRotationDeg = -120.0; // Pencil leg angle (forms a V shape)
     }
 
     ~CompassToolItem() override
@@ -201,33 +214,297 @@ public:
     }
 
 protected:
+    QRectF boundingRect() const override
+    {
+        const qreal r = m_legLength + m_hingeRadius + 20.0;
+        return QRectF(-r, -r, r * 2.0, r * 2.0);
+    }
+
+    QPainterPath shape() const override
+    {
+        QPainterPath path;
+        // Hinge area
+        path.addEllipse(QPointF(0, 0), m_hingeRadius + 5, m_hingeRadius + 5);
+        
+        // Pivot leg
+        QTransform pivotRot;
+        pivotRot.rotate(m_pivotRotationDeg);
+        QPolygonF pivotPoly;
+        pivotPoly << QPointF(0, -m_legWidth/2) << QPointF(m_legLength, -2) 
+                  << QPointF(m_legLength + 8, 0) << QPointF(m_legLength, 2) 
+                  << QPointF(0, m_legWidth/2);
+        path.addPolygon(pivotRot.map(pivotPoly));
+        
+        // Pencil leg
+        QTransform pencilRot;
+        pencilRot.rotate(m_pencilRotationDeg);
+        QPolygonF pencilPoly;
+        pencilPoly << QPointF(0, -m_legWidth/2) << QPointF(m_legLength - 10, -m_legWidth/2)
+                   << QPointF(m_legLength - 10, -m_legWidth) << QPointF(m_legLength + 5, 0)
+                   << QPointF(m_legLength - 10, m_legWidth) << QPointF(m_legLength - 10, m_legWidth/2)
+                   << QPointF(0, m_legWidth/2);
+        path.addPolygon(pencilRot.map(pencilPoly));
+        
+        return path;
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) override
+    {
+        painter->setRenderHint(QPainter::Antialiasing, true);
+        
+        // Colors
+        const QColor metalLight(200, 200, 210);
+        const QColor metalDark(120, 120, 130);
+        const QColor metalMid(160, 160, 170);
+        const QColor pivotTip(80, 80, 90);
+        const QColor pencilTip(60, 60, 60);
+        const QColor pencilLead(30, 30, 30);
+        const QColor hingeColor(140, 140, 150);
+        const QColor hingeBorder(80, 80, 90);
+        
+        // Draw pivot leg (the one with sharp point)
+        painter->save();
+        painter->rotate(m_pivotRotationDeg);
+        drawPivotLeg(painter, metalLight, metalDark, metalMid, pivotTip);
+        painter->restore();
+        
+        // Draw pencil leg
+        painter->save();
+        painter->rotate(m_pencilRotationDeg);
+        drawPencilLeg(painter, metalLight, metalDark, metalMid, pencilTip, pencilLead);
+        painter->restore();
+        
+        // Draw central hinge (on top)
+        drawHinge(painter, hingeColor, hingeBorder, metalLight);
+    }
+    
+    void drawPivotLeg(QPainter *painter, const QColor &light, const QColor &dark, 
+                      const QColor &mid, const QColor &tipColor)
+    {
+        // Main leg body with gradient
+        QLinearGradient legGrad(0, -m_legWidth/2, 0, m_legWidth/2);
+        legGrad.setColorAt(0, light);
+        legGrad.setColorAt(0.3, mid);
+        legGrad.setColorAt(0.7, mid);
+        legGrad.setColorAt(1, dark);
+        
+        QPainterPath legPath;
+        legPath.moveTo(m_hingeRadius - 2, -m_legWidth/2);
+        legPath.lineTo(m_legLength - 15, -m_legWidth/2 + 1);
+        legPath.lineTo(m_legLength - 15, -m_legWidth/2 - 1);
+        legPath.lineTo(m_legLength + 10, 0);  // Sharp point
+        legPath.lineTo(m_legLength - 15, m_legWidth/2 + 1);
+        legPath.lineTo(m_legLength - 15, m_legWidth/2 - 1);
+        legPath.lineTo(m_hingeRadius - 2, m_legWidth/2);
+        legPath.closeSubpath();
+        
+        painter->setPen(QPen(dark, 1));
+        painter->setBrush(legGrad);
+        painter->drawPath(legPath);
+        
+        // Sharp metal tip
+        QPainterPath tipPath;
+        tipPath.moveTo(m_legLength - 15, -3);
+        tipPath.lineTo(m_legLength + 10, 0);
+        tipPath.lineTo(m_legLength - 15, 3);
+        tipPath.closeSubpath();
+        painter->setBrush(tipColor);
+        painter->drawPath(tipPath);
+        
+        // Decorative lines on leg
+        painter->setPen(QPen(dark.darker(110), 0.5));
+        painter->drawLine(QPointF(m_hingeRadius + 10, 0), QPointF(m_legLength - 25, 0));
+    }
+    
+    void drawPencilLeg(QPainter *painter, const QColor &light, const QColor &dark,
+                       const QColor &mid, const QColor &tipColor, const QColor &leadColor)
+    {
+        // Main leg body
+        QLinearGradient legGrad(0, -m_legWidth/2, 0, m_legWidth/2);
+        legGrad.setColorAt(0, light);
+        legGrad.setColorAt(0.3, mid);
+        legGrad.setColorAt(0.7, mid);
+        legGrad.setColorAt(1, dark);
+        
+        QPainterPath legPath;
+        legPath.moveTo(m_hingeRadius - 2, -m_legWidth/2);
+        legPath.lineTo(m_legLength - 20, -m_legWidth/2);
+        legPath.lineTo(m_legLength - 20, -m_legWidth/2 - 3);  // Pencil holder wider
+        legPath.lineTo(m_legLength - 5, -2);
+        legPath.lineTo(m_legLength - 5, 2);
+        legPath.lineTo(m_legLength - 20, m_legWidth/2 + 3);
+        legPath.lineTo(m_legLength - 20, m_legWidth/2);
+        legPath.lineTo(m_hingeRadius - 2, m_legWidth/2);
+        legPath.closeSubpath();
+        
+        painter->setPen(QPen(dark, 1));
+        painter->setBrush(legGrad);
+        painter->drawPath(legPath);
+        
+        // Pencil holder
+        QRectF holderRect(m_legLength - 22, -m_legWidth/2 - 4, 18, m_legWidth + 8);
+        painter->setBrush(tipColor);
+        painter->drawRoundedRect(holderRect, 2, 2);
+        
+        // Pencil lead tip
+        QPainterPath leadPath;
+        leadPath.moveTo(m_legLength - 5, -2);
+        leadPath.lineTo(m_legLength + 5, 0);  // Lead tip
+        leadPath.lineTo(m_legLength - 5, 2);
+        leadPath.closeSubpath();
+        painter->setBrush(leadColor);
+        painter->setPen(QPen(leadColor.darker(), 0.5));
+        painter->drawPath(leadPath);
+        
+        // Decorative lines
+        painter->setPen(QPen(dark.darker(110), 0.5));
+        painter->drawLine(QPointF(m_hingeRadius + 10, 0), QPointF(m_legLength - 30, 0));
+    }
+    
+    void drawHinge(QPainter *painter, const QColor &base, const QColor &border, const QColor &highlight)
+    {
+        // Outer hinge ring
+        QRadialGradient hingeGrad(0, 0, m_hingeRadius);
+        hingeGrad.setColorAt(0, highlight);
+        hingeGrad.setColorAt(0.5, base);
+        hingeGrad.setColorAt(1, border);
+        
+        painter->setPen(QPen(border.darker(), 1.5));
+        painter->setBrush(hingeGrad);
+        painter->drawEllipse(QPointF(0, 0), m_hingeRadius, m_hingeRadius);
+        
+        // Inner hinge screw
+        QRadialGradient screwGrad(0, -2, m_hingeRadius * 0.5);
+        screwGrad.setColorAt(0, highlight.lighter(120));
+        screwGrad.setColorAt(1, base.darker(110));
+        
+        painter->setBrush(screwGrad);
+        painter->drawEllipse(QPointF(0, 0), m_hingeRadius * 0.6, m_hingeRadius * 0.6);
+        
+        // Screw slot
+        painter->setPen(QPen(border.darker(130), 2));
+        painter->drawLine(QPointF(-m_hingeRadius * 0.35, 0), QPointF(m_hingeRadius * 0.35, 0));
+    }
+
+    void wheelEvent(QGraphicsSceneWheelEvent *event) override
+    {
+        if (!event)
+        {
+            return;
+        }
+
+        const int deltaValue = event->delta();
+        if (deltaValue == 0)
+        {
+            return;
+        }
+
+        // Adjust the spread between legs
+        const qreal step = static_cast<qreal>(deltaValue) / 120.0 * 3.0;
+        qreal currentSpread = m_pivotRotationDeg - m_pencilRotationDeg;
+        currentSpread = std::clamp(currentSpread + step, kMinSpreadDeg, kMaxSpreadDeg);
+        m_pencilRotationDeg = m_pivotRotationDeg - currentSpread;
+        
+        update();
+        if (scene()) scene()->update();
+        event->accept();
+    }
+
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        if (!event) return;
+        
+        const QPointF pos = event->pos();
+        const QPointF pivotTip = pivotTipLocal();
+        const QPointF pencilTip = pencilTipLocal();
+        
+        const qreal distToPencil = QLineF(pos, pencilTip).length();
+        const qreal distToPivot = QLineF(pos, pivotTip).length();
+        const qreal distToHinge = QLineF(pos, QPointF(0, 0)).length();
+        
+        if (distToPencil <= 40.0)
+        {
+            setCursor(Qt::CrossCursor);  // Pencil tip - for drawing
+        }
+        else if (distToPivot <= 40.0)
+        {
+            setCursor(Qt::PointingHandCursor);  // Pivot tip - for rotating
+        }
+        else if (distToHinge <= m_hingeRadius)
+        {
+            setCursor(Qt::SizeAllCursor);  // Hinge - for moving
+        }
+        else
+        {
+            setCursor(Qt::ArrowCursor);
+        }
+    }
+
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
     {
+        if (!event)
+        {
+            MapToolItem::mousePressEvent(event);
+            return;
+        }
+
+        const QPointF pos = event->pos();
+        const QPointF pivotTip = pivotTipLocal();
+        const QPointF pencilTip = pencilTipLocal();
+
+        const qreal distToPencil = QLineF(pos, pencilTip).length();
+        const qreal distToPivot = QLineF(pos, pivotTip).length();
+        const qreal distToHinge = QLineF(pos, QPointF(0, 0)).length();
+
+        // Check tips FIRST - they have priority over hinge
+        // Use larger threshold for tips (40 pixels)
+        if (distToPencil <= 40.0)
+        {
+            // Drag pencil leg - left click draws arc, right click just adjusts spread
+            beginArcDraw(event, event->button() == Qt::LeftButton);
+            event->accept();
+            return;
+        }
+
+        if (distToPivot <= 40.0)
+        {
+            // Drag from pivot tip - rotate whole compass
+            beginRotateWhole(event);
+            event->accept();
+            return;
+        }
+
+        // Hinge area is ONLY the small center circle
+        if (distToHinge <= m_hingeRadius)
+        {
+            // Drag from hinge to move whole compass
+            beginMove(event);
+            event->accept();
+            return;
+        }
+
         MapToolItem::mousePressEvent(event);
-        if (!event || event->button() != Qt::LeftButton)
-        {
-            return;
-        }
-
-        const QPointF local = event->pos();
-        const QRectF rect = boundingRect();
-        const qreal threshold = rect.width() * 0.3;
-        if (local.x() <= rect.left() + threshold)
-        {
-            m_dragRegion = DragRegion::Pivot;
-            return;
-        }
-
-        m_dragRegion = DragRegion::Pencil;
-        beginArcDrag(event->scenePos());
-        event->accept();
     }
 
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
     {
-        if (m_dragRegion == DragRegion::Pencil && event)
+        if (m_drawingArc)
         {
-            updateArcDrag(event->scenePos());
+            updateArcDraw(event);
+            event->accept();
+            return;
+        }
+
+        if (m_rotatingWhole)
+        {
+            updateRotateWhole(event);
+            event->accept();
+            return;
+        }
+
+        if (m_draggingMove)
+        {
+            updateMove(event);
             event->accept();
             return;
         }
@@ -237,153 +514,480 @@ protected:
 
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
     {
-        if (m_dragRegion == DragRegion::Pencil && event && event->button() == Qt::LeftButton)
+        if (m_drawingArc)
         {
-            finalizeArcDrag();
+            finalizeArcDraw();
             event->accept();
+            return;
         }
-        m_dragRegion = DragRegion::None;
+
+        if (m_rotatingWhole)
+        {
+            m_rotatingWhole = false;
+            event->accept();
+            return;
+        }
+
+        if (m_draggingMove)
+        {
+            m_draggingMove = false;
+            if (m_view) m_view->handleToolDragFinished(this);
+            event->accept();
+            return;
+        }
+
         MapToolItem::mouseReleaseEvent(event);
     }
 
 private:
-    enum class DragRegion
-    {
-        None,
-        Pivot,
-        Pencil
-    };
+    static constexpr qreal kMinSpreadDeg = 15.0;
+    static constexpr qreal kMaxSpreadDeg = 160.0;
 
-    DragRegion m_dragRegion = DragRegion::None;
-    QPointF m_pivotLocal;
-    QPointF m_arcPivotScenePos;
-    qreal m_baseLegLength = 1.0;
-    qreal m_startAngleDeg = 0.0;
-    qreal m_currentSpanDeg = 0.0;
-    qreal m_currentRadius = 0.0;
+    qreal m_legLength = 180.0;
+    qreal m_legWidth = 12.0;
+    qreal m_hingeRadius = 18.0;
+    qreal m_pivotRotationDeg = -60.0;
+    qreal m_pencilRotationDeg = -120.0;
+
+    // Interaction states
+    bool m_draggingMove = false;
+    bool m_rotatingWhole = false;
+    bool m_drawingArc = false;
+    bool m_shouldPaint = false;
+    
+    QPointF m_moveSceneOffset;
+    qreal m_rotateStartAngle = 0.0;
+    qreal m_rotateStartPivot = 0.0;
+    qreal m_rotateStartPencil = 0.0;
+
+    // Arc drawing state
+    QPointF m_arcCenterMapScene;  // Pivot tip position in map scene coords
+    qreal m_arcStartAngle = 0.0;
+    qreal m_arcCurrentAngle = 0.0;
+    qreal m_arcRadius = 0.0;
     QGraphicsPathItem *m_arcPreview = nullptr;
 
-    void beginArcDrag(const QPointF &scenePos)
+    QPointF pivotTipLocal() const
     {
-        m_arcPivotScenePos = mapToScene(m_pivotLocal);
-        m_startAngleDeg = angleFromPivot(scenePos);
-        m_currentRadius = std::max<qreal>(8.0, QLineF(m_arcPivotScenePos, scenePos).length());
-        ensureArcPreview();
-        updateArcPreview(0.0);
-        displayMeasurement(QStringLiteral("0°"));
+        const QTransform rot = QTransform().rotate(m_pivotRotationDeg);
+        return rot.map(QPointF(m_legLength + 10, 0));
     }
 
-    qreal angleFromPivot(const QPointF &scenePos) const
+    QPointF pencilTipLocal() const
     {
-        return QLineF(m_arcPivotScenePos, scenePos).angle();
+        const QTransform rot = QTransform().rotate(m_pencilRotationDeg);
+        return rot.map(QPointF(m_legLength + 5, 0));
     }
 
-    void updateArcDrag(const QPointF &scenePos)
+    void beginMove(QGraphicsSceneMouseEvent *event)
     {
-        QLineF line(m_arcPivotScenePos, scenePos);
-        const qreal radius = std::max<qreal>(8.0, line.length());
-        m_currentRadius = radius;
-        if (m_baseLegLength > 0.0)
-        {
-            const qreal newScale = std::clamp(radius / m_baseLegLength, 0.6, 4.0);
-            setScale(newScale);
-        }
-
-        const qreal angle = angleFromPivot(scenePos);
-        const qreal adjustedRotation = 90.0 - angle;
-        m_rotationDeg = adjustedRotation;
-        setRotation(adjustedRotation);
-        m_currentSpanDeg = normalizeSpan(angle - m_startAngleDeg);
-        updateArcPreview(m_currentSpanDeg);
-        displayMeasurement(QString::number(qRound(m_currentSpanDeg)) + QStringLiteral("°"));
+        if (!event) return;
+        m_draggingMove = true;
+        if (m_view) m_view->handleToolDragStarted();
+        m_moveSceneOffset = event->scenePos() - pos();
     }
 
-    void finalizeArcDrag()
+    void updateMove(QGraphicsSceneMouseEvent *event)
     {
-        if (!m_view)
-        {
-            discardArcPreview();
-            return;
-        }
+        if (!event) return;
+        setPos(event->scenePos() - m_moveSceneOffset);
+    }
 
-        if (std::abs(m_currentSpanDeg) < 1.0)
-        {
-            discardArcPreview();
-            return;
-        }
+    void beginRotateWhole(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event) return;
+        m_rotatingWhole = true;
+        m_rotateStartAngle = QLineF(QPointF(0, 0), event->pos()).angle();
+        m_rotateStartPivot = m_pivotRotationDeg;
+        m_rotateStartPencil = m_pencilRotationDeg;
+    }
 
-        m_view->addArcAnnotation(m_arcPivotScenePos, m_currentRadius, m_startAngleDeg, m_currentSpanDeg);
+    void updateRotateWhole(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event) return;
+        qreal currentAngle = QLineF(QPointF(0, 0), event->pos()).angle();
+        qreal delta = currentAngle - m_rotateStartAngle;
+        m_pivotRotationDeg = m_rotateStartPivot - delta;
+        m_pencilRotationDeg = m_rotateStartPencil - delta;
+        update();
+        if (scene()) scene()->update();
+    }
+
+    void beginArcDraw(QGraphicsSceneMouseEvent *event, bool shouldPaint)
+    {
+        if (!event || !m_view) return;
+
+        m_drawingArc = true;
+        m_shouldPaint = shouldPaint;
+        
+        // Get the pivot tip position in MAP scene coordinates
+        // Tool scene pos -> viewport pos -> map scene pos
+        QPointF pivotToolScene = mapToScene(pivotTipLocal());
+        QPoint viewportPos = pivotToolScene.toPoint();
+        m_arcCenterMapScene = m_view->mapToScene(viewportPos);
+        
+        // Get pencil tip in map scene for initial angle
+        QPointF pencilToolScene = mapToScene(pencilTipLocal());
+        QPoint pencilViewport = pencilToolScene.toPoint();
+        QPointF pencilMapScene = m_view->mapToScene(pencilViewport);
+        
+        // Calculate radius and start angle in map scene
+        m_arcRadius = QLineF(m_arcCenterMapScene, pencilMapScene).length();
+        m_arcStartAngle = QLineF(m_arcCenterMapScene, pencilMapScene).angle();
+        m_arcCurrentAngle = m_arcStartAngle;
+        
+        if (m_shouldPaint)
+        {
+            createArcPreview();
+        }
+    }
+
+    void updateArcDraw(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event || !m_view) return;
+
+        // Update pencil leg angle based on mouse position (in local coords)
+        qreal mouseAngle = QLineF(QPointF(0, 0), event->pos()).angle();
+        qreal newPencilRot = -mouseAngle;
+        
+        // Clamp spread between legs
+        qreal spread = m_pivotRotationDeg - newPencilRot;
+        spread = std::clamp(spread, kMinSpreadDeg, kMaxSpreadDeg);
+        m_pencilRotationDeg = m_pivotRotationDeg - spread;
+        
+        // Get new pencil tip in map scene
+        QPointF pencilToolScene = mapToScene(pencilTipLocal());
+        QPoint pencilViewport = pencilToolScene.toPoint();
+        QPointF pencilMapScene = m_view->mapToScene(pencilViewport);
+        
+        // Update current angle for arc
+        m_arcCurrentAngle = QLineF(m_arcCenterMapScene, pencilMapScene).angle();
+        m_arcRadius = QLineF(m_arcCenterMapScene, pencilMapScene).length();
+        
+        if (m_shouldPaint && m_arcPreview)
+        {
+            updateArcPreviewPath();
+        }
+        
+        update();
+        if (scene()) scene()->update();
+    }
+
+    void finalizeArcDraw()
+    {
+        if (m_shouldPaint && m_arcPreview)
+        {
+            qreal span = m_arcCurrentAngle - m_arcStartAngle;
+            // Normalize span
+            while (span > 180) span -= 360;
+            while (span < -180) span += 360;
+            
+            if (std::abs(span) >= 2.0 && m_view)
+            {
+                m_view->addArcAnnotation(m_arcCenterMapScene, m_arcRadius, m_arcStartAngle, span);
+            }
+        }
+        
         discardArcPreview();
+        m_drawingArc = false;
+        m_shouldPaint = false;
     }
 
-    void ensureArcPreview()
+    void createArcPreview()
     {
-        if (m_arcPreview)
-        {
-            return;
-        }
+        if (m_arcPreview || !m_view || !m_view->scene()) return;
 
         m_arcPreview = new QGraphicsPathItem();
-        QPen pen(Qt::white);
-        if (m_view)
-        {
-            pen.setColor(m_view->drawingColor());
-            pen.setWidth(std::max(1, m_view->strokeWidth()));
-        }
-        pen.setStyle(Qt::DashLine);
+        QPen pen(m_view->drawingColor());
+        pen.setWidth(std::max(2, m_view->strokeWidth()));
+        pen.setStyle(Qt::SolidLine);
         pen.setCapStyle(Qt::RoundCap);
-        pen.setJoinStyle(Qt::RoundJoin);
-        QColor color = pen.color();
-        color.setAlpha(180);
-        pen.setColor(color);
         m_arcPreview->setPen(pen);
         m_arcPreview->setZValue(88.0);
-        if (scene())
-        {
-            scene()->addItem(m_arcPreview);
-        }
+        m_view->scene()->addItem(m_arcPreview);
     }
 
-    void updateArcPreview(qreal spanDeg)
+    void updateArcPreviewPath()
     {
-        if (!m_arcPreview)
-        {
-            return;
-        }
+        if (!m_arcPreview) return;
+
+        qreal span = m_arcCurrentAngle - m_arcStartAngle;
+        while (span > 180) span -= 360;
+        while (span < -180) span += 360;
 
         QPainterPath path;
-        const QRectF rect(m_arcPivotScenePos.x() - m_currentRadius, m_arcPivotScenePos.y() - m_currentRadius,
-                          m_currentRadius * 2, m_currentRadius * 2);
-        path.arcMoveTo(rect, m_startAngleDeg);
-        path.arcTo(rect, m_startAngleDeg, spanDeg);
+        QRectF arcRect(m_arcCenterMapScene.x() - m_arcRadius,
+                       m_arcCenterMapScene.y() - m_arcRadius,
+                       m_arcRadius * 2, m_arcRadius * 2);
+        path.arcMoveTo(arcRect, m_arcStartAngle);
+        path.arcTo(arcRect, m_arcStartAngle, span);
         m_arcPreview->setPath(path);
     }
 
     void discardArcPreview()
     {
-        if (!m_arcPreview)
+        if (!m_arcPreview) return;
+        if (m_view && m_view->scene())
         {
-            return;
-        }
-        if (scene())
-        {
-            scene()->removeItem(m_arcPreview);
+            m_view->scene()->removeItem(m_arcPreview);
         }
         delete m_arcPreview;
         m_arcPreview = nullptr;
     }
+};
 
-    static qreal normalizeSpan(qreal value)
+// -------------------------------------------------------
+// RulerToolItem - Custom ruler with two handlebars
+// One handlebar moves the ruler, the other rotates with anchor at the opposite end
+// -------------------------------------------------------
+class RulerToolItem : public MapToolItem
+{
+public:
+    RulerToolItem(const QString &toolId, const QString &resourcePath, Carta *view)
+        : MapToolItem(toolId, resourcePath, view)
     {
-        while (value > 360.0)
+        // IMPORTANT: Disable automatic moving - we handle it manually via handlebars
+        setFlag(QGraphicsItem::ItemIsMovable, false);
+        
+        setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
+        setAcceptHoverEvents(true);
+        setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
+        setCursor(Qt::ArrowCursor);
+        
+        // Override scale - ruler SVG is very large (4872 x 348)
+        // Scale to a reasonable size: about 400 pixels wide
+        setScale(600.0 / 4872.0);
+    }
+
+    ~RulerToolItem() override = default;
+
+    // Public methods for event forwarding from Carta
+    void handleMousePress(QGraphicsSceneMouseEvent *event) { mousePressEvent(event); }
+    void handleMouseMove(QGraphicsSceneMouseEvent *event) { mouseMoveEvent(event); }
+    void handleMouseRelease(QGraphicsSceneMouseEvent *event) { mouseReleaseEvent(event); }
+    QRectF rulerBoundingRect() const { return MapToolItem::boundingRect(); }
+
+protected:
+    // Handlebar dimensions (in local SVG coordinates)
+    static constexpr qreal kHandleRadius = 80.0;  // Radius of circular handles
+    static constexpr qreal kHandleOffset = 50.0;  // Distance from edge
+    
+    // Get the bounding rect of the SVG
+    QRectF svgRect() const
+    {
+        // The ruler SVG is 4872.2583 x 348.90323
+        return QRectF(0, 0, 4872.2583, 348.90323);
+    }
+    
+    // Left end position (anchor for rotation) - in local coords
+    QPointF leftEndCenter() const
+    {
+        QRectF rect = svgRect();
+        return QPointF(kHandleOffset + kHandleRadius, rect.height() / 2);
+    }
+    
+    // Right handlebar position (ROTATE handle) - in local coords
+    QPointF rightHandleCenter() const
+    {
+        QRectF rect = svgRect();
+        return QPointF(rect.width() - kHandleOffset - kHandleRadius, rect.height() / 2);
+    }
+    
+    // Check if point is in right (rotate) handle
+    bool isInRightHandle(const QPointF &localPos) const
+    {
+        return QLineF(localPos, rightHandleCenter()).length() <= kHandleRadius * 1.5;
+    }
+
+    QRectF boundingRect() const override
+    {
+        // Include extra space for the handles
+        QRectF base = MapToolItem::boundingRect();
+        return base.adjusted(-kHandleRadius, -kHandleRadius, kHandleRadius, kHandleRadius);
+    }
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override
+    {
+        // Draw the SVG ruler first
+        MapToolItem::paint(painter, option, widget);
+        
+        painter->save();
+        
+        // Draw right handle (ROTATE) - green circle with rotation icon
+        QPointF rightCenter = rightHandleCenter();
+        painter->setPen(QPen(Qt::white, 4));
+        painter->setBrush(QColor(0, 150, 80, 200));
+        painter->drawEllipse(rightCenter, kHandleRadius, kHandleRadius);
+        
+        // Draw rotation arc icon
+        painter->setPen(QPen(Qt::white, 6, Qt::SolidLine, Qt::RoundCap));
+        qreal arrowLen = kHandleRadius * 0.5;
+        QRectF arcRect(rightCenter.x() - arrowLen, rightCenter.y() - arrowLen, arrowLen * 2, arrowLen * 2);
+        painter->drawArc(arcRect, 30 * 16, 240 * 16);  // Draw arc
+        // Arrow at end of arc
+        painter->drawLine(rightCenter + QPointF(arrowLen * 0.5, -arrowLen * 0.87),
+                          rightCenter + QPointF(arrowLen * 0.3, -arrowLen * 0.5));
+        painter->drawLine(rightCenter + QPointF(arrowLen * 0.5, -arrowLen * 0.87),
+                          rightCenter + QPointF(arrowLen * 0.8, -arrowLen * 0.7));
+        
+        painter->restore();
+    }
+
+    void hoverMoveEvent(QGraphicsSceneHoverEvent *event) override
+    {
+        if (!event) return;
+        
+        const QPointF pos = event->pos();
+        
+        if (isInRightHandle(pos))
         {
-            value -= 360.0;
+            setCursor(Qt::PointingHandCursor);  // Rotate cursor
         }
-        while (value < -360.0)
+        else
         {
-            value += 360.0;
+            setCursor(Qt::SizeAllCursor);  // Move cursor for anywhere else
         }
-        return value;
+    }
+
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (!event)
+        {
+            MapToolItem::mousePressEvent(event);
+            return;
+        }
+
+        const QPointF pos = event->pos();
+
+        if (isInRightHandle(pos))
+        {
+            // Right handle: ROTATE around left end (anchor point)
+            beginRotate(event);
+            event->accept();
+            return;
+        }
+
+        // Click anywhere else on the ruler: MOVE
+        beginMove(event);
+        event->accept();
+    }
+
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (!event)
+        {
+            MapToolItem::mouseMoveEvent(event);
+            return;
+        }
+
+        if (m_draggingMove)
+        {
+            updateMove(event);
+            event->accept();
+            return;
+        }
+
+        if (m_rotating)
+        {
+            updateRotate(event);
+            event->accept();
+            return;
+        }
+
+        MapToolItem::mouseMoveEvent(event);
+    }
+
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (m_draggingMove)
+        {
+            m_draggingMove = false;
+            if (m_view) m_view->handleToolDragFinished(this);
+        }
+
+        if (m_rotating)
+        {
+            m_rotating = false;
+            // Show final angle
+            qreal angle = std::fmod(rotation(), 360.0);
+            if (angle < 0) angle += 360.0;
+            displayMeasurement(QString::number(angle, 'f', 1) + QStringLiteral("°"));
+        }
+
+        event->accept();
+    }
+
+    // Disable wheel rotation - now handled by handlebars
+    void wheelEvent(QGraphicsSceneWheelEvent *event) override
+    {
+        // Just accept and ignore
+        if (event) event->accept();
+    }
+
+private:
+    bool m_draggingMove = false;
+    bool m_rotating = false;
+    QPointF m_moveSceneOffset;
+    QPointF m_rotateAnchorScene;  // Anchor point in scene coords
+    QPointF m_rotateStartPos;     // Starting position when rotation began
+    qreal m_rotateStartAngle = 0.0;
+    qreal m_rotateStartRotation = 0.0;
+
+    void beginMove(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event) return;
+        m_draggingMove = true;
+        if (m_view) m_view->handleToolDragStarted();
+        m_moveSceneOffset = event->scenePos() - pos();
+    }
+
+    void updateMove(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event) return;
+        setPos(event->scenePos() - m_moveSceneOffset);
+    }
+
+    void beginRotate(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event) return;
+        m_rotating = true;
+        
+        // Store the left end position in scene coords BEFORE rotation
+        m_rotateAnchorScene = mapToScene(leftEndCenter());
+        
+        // Store starting angle from anchor to mouse
+        QPointF mouseScene = event->scenePos();
+        m_rotateStartAngle = QLineF(m_rotateAnchorScene, mouseScene).angle();
+        m_rotateStartRotation = rotation();
+        m_rotateStartPos = pos();
+        
+        // Set transform origin to left end (in local coordinates)
+        setTransformOriginPoint(leftEndCenter());
+    }
+
+    void updateRotate(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event) return;
+        
+        // Calculate current angle from original anchor to mouse
+        QPointF mouseScene = event->scenePos();
+        qreal currentAngle = QLineF(m_rotateAnchorScene, mouseScene).angle();
+        
+        // Delta angle (Qt angles are counterclockwise, so negate)
+        qreal delta = m_rotateStartAngle - currentAngle;
+        
+        // Apply rotation
+        qreal newRotation = m_rotateStartRotation + delta;
+        setRotation(newRotation);
+        
+        // After rotation, the left end has moved. We need to move the item
+        // so that the left end stays at the original anchor position.
+        QPointF newAnchorScene = mapToScene(leftEndCenter());
+        QPointF correction = m_rotateAnchorScene - newAnchorScene;
+        setPos(pos() + correction);
+        
+        update();
+        if (scene()) scene()->update();
     }
 };
 
@@ -391,6 +995,7 @@ Carta::Carta(QWidget *parent)
     : QGraphicsView(parent)
 {
     setScene(&m_scene);
+    m_toolScene.setSceneRect(-5000, -5000, 10000, 10000);
     setRenderHint(QPainter::SmoothPixmapTransform, true);
     setRenderHint(QPainter::Antialiasing, false);
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
@@ -407,8 +1012,14 @@ Carta::Carta(QWidget *parent)
     if (viewport())
     {
         viewport()->setAcceptDrops(true);
+        viewport()->setAttribute(Qt::WA_AcceptDrops, true);
     }
     m_scene.setBackgroundBrush(Qt::black);
+    
+    // Ensure the view is ready for tool drops
+    QTimer::singleShot(0, this, [this]() {
+        viewport()->update();
+    });
 }
 
 void Carta::setOverlayWidget(QWidget *widget)
@@ -455,7 +1066,7 @@ void Carta::moveOverlayBy(const QPoint &delta)
 
     const QPoint desired = clampOverlayToViewport(m_overlayWidget->pos() + delta);
     m_overlayWidget->move(desired);
-    m_overlayScenePos = mapToScene(desired);
+    m_overlayViewportPos = desired;
     m_overlayUserMoved = true;
 }
 
@@ -645,9 +1256,35 @@ void Carta::setZoomRange(qreal minFactor, qreal maxFactor)
 
 void Carta::wheelEvent(QWheelEvent *event)
 {
-    if (dispatchWheelEventToTool(event))
+    // Check if wheel event is over a tool
+    const QPoint viewPos = wheelEventViewportPos(event);
+    const QPointF toolScenePos = QPointF(viewPos);
+    QGraphicsItem *toolItem = m_toolScene.itemAt(toolScenePos, QTransform());
+    
+    if (toolItem)
     {
-        return;
+        // Find top-level MapToolItem
+        while (toolItem && !qgraphicsitem_cast<MapToolItem*>(toolItem))
+        {
+            toolItem = toolItem->parentItem();
+        }
+        
+        if (MapToolItem *mapTool = qgraphicsitem_cast<MapToolItem*>(toolItem))
+        {
+            QGraphicsSceneWheelEvent sceneEvent(QEvent::GraphicsSceneWheel);
+            sceneEvent.setScenePos(toolScenePos);
+            sceneEvent.setPos(mapTool->mapFromScene(toolScenePos));
+            sceneEvent.setDelta(event->angleDelta().y());
+            sceneEvent.setButtons(event->buttons());
+            sceneEvent.setModifiers(event->modifiers());
+            m_toolScene.sendEvent(mapTool, &sceneEvent);
+            if (sceneEvent.isAccepted())
+            {
+                viewport()->update();
+                event->accept();
+                return;
+            }
+        }
     }
 
     if (!m_mapItem)
@@ -678,7 +1315,64 @@ void Carta::wheelEvent(QWheelEvent *event)
 void Carta::mousePressEvent(QMouseEvent *event)
 {
     setFocus();
+
+    // FIRST: Check if clicking on overlay (toolbox) - this takes priority
+    if (m_overlayWidget && !m_overlayMouseTransparent)
+    {
+        const QPoint overlayPos = m_overlayWidget->mapFromParent(event->pos());
+        if (m_overlayWidget->rect().contains(overlayPos))
+        {
+            // Pass to base class which will let the child widget handle it
+            QGraphicsView::mousePressEvent(event);
+            return;
+        }
+    }
+
+    // SECOND: Check if clicking on a tool in tool scene (only if NOT over overlay)
+    const QPointF toolScenePos = QPointF(event->pos());
+    QGraphicsItem *toolItem = m_toolScene.itemAt(toolScenePos, QTransform());
     
+    if (toolItem)
+    {
+        // Find top-level MapToolItem
+        while (toolItem && !qgraphicsitem_cast<MapToolItem*>(toolItem))
+        {
+            toolItem = toolItem->parentItem();
+        }
+        
+        if (MapToolItem *mapTool = qgraphicsitem_cast<MapToolItem*>(toolItem))
+        {
+            // Check if this is a RulerToolItem - let it handle its own events
+            if (RulerToolItem *ruler = dynamic_cast<RulerToolItem*>(mapTool))
+            {
+                // Forward mouse event to the ruler's scene event handler
+                QPointF localPos = ruler->mapFromScene(toolScenePos);
+                QGraphicsSceneMouseEvent sceneEvent(QEvent::GraphicsSceneMousePress);
+                sceneEvent.setPos(localPos);
+                sceneEvent.setScenePos(toolScenePos);
+                sceneEvent.setScreenPos(event->globalPosition().toPoint());
+                sceneEvent.setButton(event->button());
+                sceneEvent.setButtons(event->buttons());
+                sceneEvent.setModifiers(event->modifiers());
+                
+                // Store reference for move/release events
+                m_draggedToolItem = ruler;
+                m_activeRuler = ruler;
+                
+                // Send to ruler
+                ruler->handleMousePress(&sceneEvent);
+                event->accept();
+                return;
+            }
+            
+            // Other tools use default dragging
+            m_draggedToolItem = mapTool;
+            m_toolDragOffset = toolScenePos - mapTool->pos();
+            event->accept();
+            return;
+        }
+    }
+
     if (event->button() == Qt::LeftButton && m_mapItem)
     {
         QGraphicsItem *clickedItem = itemAt(event->pos());
@@ -723,6 +1417,37 @@ void Carta::mousePressEvent(QMouseEvent *event)
 
 void Carta::mouseMoveEvent(QMouseEvent *event)
 {
+    // Forward to RulerToolItem if we have an active ruler
+    if (m_activeRuler)
+    {
+        const QPointF toolScenePos = QPointF(event->pos());
+        QPointF localPos = m_activeRuler->mapFromScene(toolScenePos);
+        
+        QGraphicsSceneMouseEvent sceneEvent(QEvent::GraphicsSceneMouseMove);
+        sceneEvent.setPos(localPos);
+        sceneEvent.setScenePos(toolScenePos);
+        sceneEvent.setScreenPos(event->globalPosition().toPoint());
+        sceneEvent.setButton(event->button());
+        sceneEvent.setButtons(event->buttons());
+        sceneEvent.setModifiers(event->modifiers());
+        
+        m_activeRuler->handleMouseMove(&sceneEvent);
+        viewport()->update();
+        event->accept();
+        return;
+    }
+    
+    // Forward to tool scene if we're dragging a tool (non-ruler)
+    if (m_draggedToolItem)
+    {
+        const QPointF toolScenePos = QPointF(event->pos());
+        // Move the tool directly
+        m_draggedToolItem->setPos(toolScenePos - m_toolDragOffset);
+        viewport()->update();
+        event->accept();
+        return;
+    }
+
     if (m_currentStroke)
     {
         extendStroke(mapToScene(event->pos()));
@@ -759,6 +1484,65 @@ void Carta::mouseMoveEvent(QMouseEvent *event)
 
 void Carta::mouseReleaseEvent(QMouseEvent *event)
 {
+    // Forward to RulerToolItem if we have an active ruler
+    if (m_activeRuler)
+    {
+        const QPointF toolScenePos = QPointF(event->pos());
+        QPointF localPos = m_activeRuler->mapFromScene(toolScenePos);
+        
+        QGraphicsSceneMouseEvent sceneEvent(QEvent::GraphicsSceneMouseRelease);
+        sceneEvent.setPos(localPos);
+        sceneEvent.setScenePos(toolScenePos);
+        sceneEvent.setScreenPos(event->globalPosition().toPoint());
+        sceneEvent.setButton(event->button());
+        sceneEvent.setButtons(event->buttons());
+        sceneEvent.setModifiers(event->modifiers());
+        
+        m_activeRuler->handleMouseRelease(&sceneEvent);
+        
+        // Store final position
+        storeToolViewportPos(m_activeRuler);
+        
+        // Check if returned to toolbox
+        const QRectF toolBounds = m_activeRuler->rulerBoundingRect();
+        const QPoint centerPoint = QPoint(
+            static_cast<int>(m_activeRuler->pos().x() + toolBounds.width() * m_activeRuler->scale() / 2),
+            static_cast<int>(m_activeRuler->pos().y() + toolBounds.height() * m_activeRuler->scale() / 2));
+        
+        if (overlayContainsViewportPoint(centerPoint))
+        {
+            removeTool(m_activeRuler->toolId());
+        }
+        
+        m_activeRuler = nullptr;
+        m_draggedToolItem = nullptr;
+        viewport()->update();
+        event->accept();
+        return;
+    }
+    
+    // Forward to tool scene if we were dragging a tool (non-ruler)
+    if (m_draggedToolItem)
+    {
+        // Store final position and check if returned to toolbox
+        storeToolViewportPos(m_draggedToolItem);
+        
+        // Use tool center for checking if it's over the toolbox
+        const QRectF toolBounds = m_draggedToolItem->boundingRect();
+        const QPoint centerPoint = QPoint(static_cast<int>(m_draggedToolItem->pos().x() + toolBounds.width() * m_draggedToolItem->scale() / 2),
+                                          static_cast<int>(m_draggedToolItem->pos().y() + toolBounds.height() * m_draggedToolItem->scale() / 2));
+        
+        if (overlayContainsViewportPoint(centerPoint))
+        {
+            removeTool(m_draggedToolItem->toolId());
+        }
+        
+        m_draggedToolItem = nullptr;
+        viewport()->update();
+        event->accept();
+        return;
+    }
+
     if (event->button() == Qt::LeftButton)
     {
         if (m_currentStroke)
@@ -813,6 +1597,17 @@ void Carta::scrollContentsBy(int dx, int dy)
     syncOverlayToScene();
 }
 
+void Carta::enterEvent(QEnterEvent *event)
+{
+    QGraphicsView::enterEvent(event);
+    setFocus();  // Grab keyboard focus when mouse enters
+}
+
+void Carta::leaveEvent(QEvent *event)
+{
+    QGraphicsView::leaveEvent(event);
+}
+
 void Carta::dragEnterEvent(QDragEnterEvent *event)
 {
     if (acceptsToolMime(event->mimeData()))
@@ -850,10 +1645,17 @@ void Carta::dropEvent(QDropEvent *event)
 #else
     const QPoint widgetPos = event->pos();
 #endif
-    const QPointF scenePos = mapToScene(widgetPos);
+    const QPointF toolScenePos = QPointF(widgetPos);
 
-    if (addToolItem(toolId, resourcePath, scenePos))
+    if (addToolItem(toolId, resourcePath, toolScenePos))
     {
+        // Select the newly added tool so it can be moved immediately
+        if (MapToolItem *addedTool = m_activeToolItems.value(toolId))
+        {
+            addedTool->setSelected(true);
+        }
+        // Force viewport update so tool appears immediately
+        viewport()->update();
         event->acceptProposedAction();
     }
     else
@@ -974,20 +1776,13 @@ void Carta::syncOverlayToScene(bool clampToViewport)
         return;
     }
 
-    if (scene())
-    {
-        const QRectF rect = scene()->sceneRect();
-        m_overlayScenePos.setX(std::clamp(m_overlayScenePos.x(), rect.left(), rect.right()));
-        m_overlayScenePos.setY(std::clamp(m_overlayScenePos.y(), rect.top(), rect.bottom()));
-    }
-
-    QPointF viewportPointF = mapFromScene(m_overlayScenePos);
-    QPoint desired = viewportPointF.toPoint();
+    QPoint desired = m_overlayViewportPos;
     if (clampToViewport)
     {
         desired = clampOverlayToViewport(desired);
     }
 
+    m_overlayViewportPos = desired;
     m_overlayWidget->move(desired);
 }
 
@@ -998,8 +1793,15 @@ QPoint Carta::clampOverlayToViewport(const QPoint &candidate) const
         return candidate;
     }
 
+    int minVisibleHeight = m_overlayWidget->height();
+    if (auto *panel = qobject_cast<MapOverlayPanel *>(m_overlayWidget))
+    {
+        minVisibleHeight = panel->minimumVisibleHeight();
+    }
+
+    const int visibleHeight = std::max(0, minVisibleHeight);
     const int maxX = std::max(0, viewport()->width() - m_overlayWidget->width());
-    const int maxY = std::max(0, viewport()->height() - m_overlayWidget->height());
+    const int maxY = std::max(0, viewport()->height() - visibleHeight);
     QPoint clamped(candidate);
     clamped.setX(std::clamp(clamped.x(), 0, maxX));
     clamped.setY(std::clamp(clamped.y(), 0, maxY));
@@ -1009,7 +1811,7 @@ QPoint Carta::clampOverlayToViewport(const QPoint &candidate) const
 void Carta::setOverlayDefaultScenePos()
 {
     const QPoint defaultViewportPoint(m_overlayMargin, m_overlayMargin);
-    m_overlayScenePos = mapToScene(defaultViewportPoint);
+    m_overlayViewportPos = defaultViewportPoint;
 }
 
 bool Carta::acceptsToolMime(const QMimeData *mime) const
@@ -1029,6 +1831,7 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
         const QRectF bounds = existing->boundingRect();
         existing->setPos(scenePos - bounds.center());
         existing->update();
+        storeToolViewportPos(existing);
         return true;
     }
 
@@ -1036,6 +1839,10 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
     if (toolId == QLatin1String("tool_compass"))
     {
         item = new CompassToolItem(toolId, resourcePath, this);
+    }
+    else if (toolId == QLatin1String("tool_ruler"))
+    {
+        item = new RulerToolItem(toolId, resourcePath, this);
     }
     else
     {
@@ -1052,10 +1859,12 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
     {
         item->setTransformOriginPoint(bounds.center());
     }
-    item->setPos(scenePos - bounds.center());
+    // scenePos is already in viewport coordinates for tool scene
+    item->setPos(scenePos);
 
-    m_scene.addItem(item);
+    m_toolScene.addItem(item);
     m_activeToolItems.insert(toolId, item);
+    storeToolViewportPos(item);
     return true;
 }
 
@@ -1070,12 +1879,13 @@ void Carta::clearToolInstances()
     {
         if (MapToolItem *item = it.value())
         {
-            m_scene.removeItem(item);
+            m_toolScene.removeItem(item);
             delete item;
         }
     }
 
     m_activeToolItems.clear();
+    m_toolViewportPos.clear();
 }
 
 void Carta::setOverlayMouseTransparent(bool enabled)
@@ -1097,6 +1907,7 @@ void Carta::setOverlayMouseTransparent(bool enabled)
 
 void Carta::handleToolDragStarted()
 {
+    m_toolDragInProgress = true;
     setOverlayMouseTransparent(true);
 }
 
@@ -1106,13 +1917,22 @@ void Carta::handleToolDragFinished(MapToolItem *item)
 
     if (!item)
     {
+        m_toolDragInProgress = false;
         return;
     }
 
-    if (overlayContainsSceneRect(item->sceneBoundingRect()))
+    m_toolDragInProgress = false;
+
+    // Only remove tool if it's dragged back INTO the overlay area
+    // Tools being repositioned elsewhere should stay
+    const QPointF itemViewportPos = item->pos();
+    if (overlayContainsViewportPoint(itemViewportPos.toPoint()))
     {
         removeTool(item->toolId());
+        return;
     }
+
+    storeToolViewportPos(item);
 }
 
 void Carta::handleToolItemDestroyed(MapToolItem *item)
@@ -1127,6 +1947,7 @@ void Carta::handleToolItemDestroyed(MapToolItem *item)
     {
         m_activeToolItems.remove(key);
     }
+    m_toolViewportPos.remove(item);
 }
 
 void Carta::removeTool(const QString &toolId)
@@ -1142,7 +1963,9 @@ void Carta::removeTool(const QString &toolId)
         return;
     }
 
-    m_scene.removeItem(item);
+    m_toolViewportPos.remove(item);
+
+    m_toolScene.removeItem(item);
     delete item;
 }
 
@@ -1158,6 +1981,63 @@ bool Carta::overlayContainsSceneRect(const QRectF &rect) const
     return overlayContainsViewportPoint(viewportPoint);
 }
 
+void Carta::storeToolViewportPos(MapToolItem *item)
+{
+    if (!item || !viewport())
+    {
+        return;
+    }
+
+    m_toolViewportPos.insert(item, item->pos());
+}
+
+void Carta::repositionToolsToViewport()
+{
+    if (m_toolDragInProgress || m_activeToolItems.isEmpty() || !viewport())
+    {
+        return;
+    }
+
+    const QRectF viewRect = viewport()->rect();
+
+    for (MapToolItem *item : m_activeToolItems)
+    {
+        if (!item)
+        {
+            continue;
+        }
+
+        QPointF storedPos = m_toolViewportPos.value(item, item->pos());
+        storedPos.setX(std::clamp(storedPos.x(), viewRect.left(), viewRect.right()));
+        storedPos.setY(std::clamp(storedPos.y(), viewRect.top(), viewRect.bottom()));
+        m_toolViewportPos.insert(item, storedPos);
+        item->setPos(storedPos);
+    }
+}
+
+void Carta::drawForeground(QPainter *painter, const QRectF &rect)
+{
+    Q_UNUSED(rect);
+    
+    // Render tool scene on top without any view transform
+    painter->save();
+    painter->resetTransform();
+    const QRect viewRect = viewport()->rect();
+    
+    // Clip to exclude overlay area so tools don't render on top of toolbox
+    if (m_overlayWidget && m_overlayWidget->isVisible())
+    {
+        QRegion clipRegion(viewRect);
+        clipRegion -= m_overlayWidget->geometry();
+        painter->setClipRegion(clipRegion);
+    }
+    
+    m_toolScene.render(painter, viewRect, QRectF(viewRect));
+    painter->restore();
+    
+    QGraphicsView::drawForeground(painter, rect);
+}
+
 bool Carta::overlayContainsViewportPoint(const QPoint &point) const
 {
     if (!m_overlayWidget)
@@ -1166,6 +2046,53 @@ bool Carta::overlayContainsViewportPoint(const QPoint &point) const
     }
 
     return m_overlayWidget->geometry().contains(point);
+}
+
+MapToolItem *Carta::rulerItem() const
+{
+    return m_activeToolItems.value(QStringLiteral("tool_ruler"), nullptr);
+}
+
+bool Carta::pointHitsRuler(const QPointF &scenePos, MapToolItem *ruler) const
+{
+    if (!ruler)
+    {
+        return false;
+    }
+
+    // Convert map scene pos to viewport pos, then to tool scene pos
+    const QPoint viewportPos = mapFromScene(scenePos);
+    const QPointF toolScenePos = QPointF(viewportPos);
+    const QPointF localPos = ruler->mapFromScene(toolScenePos);
+    return ruler->shape().contains(localPos);
+}
+
+QPointF Carta::rulerDirection(MapToolItem *ruler) const
+{
+    if (!ruler)
+    {
+        return QPointF(1.0, 0.0);
+    }
+
+    // Ruler rotation is in tool scene, direction follows Qt's clockwise rotation
+    // In screen coordinates (Y down), rotation angle follows standard trigonometry
+    const qreal angleDeg = ruler->rotation();
+    const qreal angleRad = qDegreesToRadians(angleDeg);
+    return QPointF(std::cos(angleRad), std::sin(angleRad));
+}
+
+QPointF Carta::applyRulerSnap(const QPointF &prevPoint, const QPointF &candidate) const
+{
+    MapToolItem *ruler = rulerItem();
+    if (!pointHitsRuler(candidate, ruler))
+    {
+        return candidate;
+    }
+
+    const QPointF dir = rulerDirection(ruler);
+    const QPointF delta = candidate - prevPoint;
+    const qreal projection = delta.x() * dir.x() + delta.y() * dir.y();
+    return prevPoint + dir * projection;
 }
 
 bool Carta::dispatchWheelEventToTool(QWheelEvent *event)
@@ -1465,12 +2392,14 @@ void Carta::extendStroke(const QPointF &scenePos)
         return;
     }
 
-    if (scenePos == m_currentStrokePath.currentPosition())
+    const QPointF adjusted = applyRulerSnap(m_currentStrokePath.currentPosition(), scenePos);
+
+    if (adjusted == m_currentStrokePath.currentPosition())
     {
         return;
     }
 
-    m_currentStrokePath.lineTo(scenePos);
+    m_currentStrokePath.lineTo(adjusted);
     m_currentStroke->setPath(m_currentStrokePath);
 }
 
@@ -1635,14 +2564,6 @@ void Carta::keyPressEvent(QKeyEvent *event)
         return;
     }
 
-    if (event->key() == Qt::Key_Shift && !event->isAutoRepeat() && !m_shiftPressed)
-    {
-        m_shiftPressed = true;
-        updateProjectionLines();
-        event->accept();
-        return;
-    }
-
     QGraphicsView::keyPressEvent(event);
 }
 
@@ -1654,38 +2575,17 @@ void Carta::keyReleaseEvent(QKeyEvent *event)
         return;
     }
 
-    if (event->key() == Qt::Key_Shift && !event->isAutoRepeat() && m_shiftPressed)
-    {
-        m_shiftPressed = false;
-        clearProjectionLines();
-        event->accept();
-        return;
-    }
-
     QGraphicsView::keyReleaseEvent(event);
 }
 
 void Carta::focusInEvent(QFocusEvent *event)
 {
     QGraphicsView::focusInEvent(event);
-    if (QApplication::keyboardModifiers() & Qt::ShiftModifier)
-    {
-        if (!m_shiftPressed)
-        {
-            m_shiftPressed = true;
-            updateProjectionLines();
-        }
-    }
 }
 
 void Carta::focusOutEvent(QFocusEvent *event)
 {
     QGraphicsView::focusOutEvent(event);
-    if (m_shiftPressed)
-    {
-        m_shiftPressed = false;
-        clearProjectionLines();
-    }
 }
 
 void Carta::showAnnotationContextMenu(QGraphicsItem *item, const QPoint &globalPos)
@@ -1721,7 +2621,7 @@ void Carta::showAnnotationContextMenu(QGraphicsItem *item, const QPoint &globalP
         }
 
         const QColor newColor = QColorDialog::getColor(currentColor, this, tr("Seleccionar color"),
-                                                        QColorDialog::ShowAlphaChannel);
+                                                       QColorDialog::ShowAlphaChannel);
         if (newColor.isValid())
         {
             changeAnnotationColor(item, newColor);
@@ -1800,9 +2700,27 @@ bool Carta::isAnnotationItem(QGraphicsItem *item) const
     return false;
 }
 
+void Carta::setProjectionLinesVisible(bool visible)
+{
+    m_showProjectionLines = visible;
+    if (visible)
+    {
+        updateProjectionLines();
+    }
+    else
+    {
+        clearProjectionLines();
+    }
+}
+
 void Carta::updateProjectionLines()
 {
     clearProjectionLines();
+
+    if (!m_showProjectionLines)
+    {
+        return;
+    }
 
     if (!m_mapItem || !scene())
     {
@@ -1857,4 +2775,3 @@ void Carta::clearProjectionLines()
     }
     m_projectionLines.clear();
 }
-
