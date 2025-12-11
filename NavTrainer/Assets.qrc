@@ -1,21 +1,24 @@
 <RCC>
-	<qresource prefix="/assets">
-		<file>carta_nautica.jpg</file>
-		<file>styles/map_overlay.qss</file>
-		<file>ruler.svg</file>
-		<file>transportador.svg</file>
-		<file>compass_leg.svg</file>
-		<file>icons/drag.svg</file>
-		<file>icons/paint.svg</file>
-		<file>icons/erase.svg</file>
-		<file>icons/text.svg</file>
-		<file>icons/undo.svg</file>
-		<file>icons/settings.svg</file>
-		<file>icons/trash.svg</file>
-		<file>icons/point.svg</file>
-		<file>icons/line.svg</file>
-		<file>icons/avatar-default.svg</file>
-		<file>icons/folder.svg</file>
-		<file>icons/grid.svg</file>
-	</qresource>
+    <qresource prefix="/assets">
+        <file>carta_nautica.jpg</file>
+        <file>styles/map_overlay.qss</file>
+        <file>ruler.svg</file>
+        <file>transportador.svg</file>
+        <file>compass_leg.svg</file>
+        <file>icons/drag.svg</file>
+        <file>icons/paint.svg</file>
+        <file>icons/erase.svg</file>
+        <file>icons/text.svg</file>
+        <file>icons/undo.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/trash.svg</file>
+        <file>icons/point.svg</file>
+        <file>icons/line.svg</file>
+        <file>icons/avatar-default.svg</file>
+        <file>icons/folder.svg</file>
+        <file>icons/grid.svg</file>
+        <file>icons/problemas.svg</file>
+        <file>icons/stats.svg</file>
+        <file>icons/help.svg</file>
+    </qresource>
 </RCC>

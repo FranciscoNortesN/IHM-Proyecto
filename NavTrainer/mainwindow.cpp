@@ -21,16 +21,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupMapView();
     setupOverlayPanel();
-    setupSidebarButtons();
-
-    // Colapsar la barra lateral al inicio
-    if (ui->splitter)
-    {
-        QList<int> sizes;
-        sizes << ui->splitter->width() << 0; // Mapa ocupa todo el ancho, sidebar colapsada
-        ui->splitter->setSizes(sizes);
-        ui->splitter->setCollapsible(1, true); // Hacer que la barra lateral sea colapsable
-    }
 
     if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Estrecho de Gibraltar")))
     {
@@ -54,12 +44,6 @@ void MainWindow::setupMapView()
     mapLayout->setSpacing(0);
     mapLayout->addWidget(m_carta);
     mapLayout->setStretch(0, 1);
-
-    if (ui->splitter)
-    {
-        ui->splitter->setStretchFactor(0, 3);
-        ui->splitter->setStretchFactor(1, 1);
-    }
 }
 
 void MainWindow::setupOverlayPanel()
@@ -304,59 +288,4 @@ void MainWindow::setupShortcuts()
 
     bind(QKeySequence(Qt::CTRL | Qt::Key_O), [this]()
          { promptForMapChange(); });
-}
-
-void MainWindow::setupSidebarButtons()
-{
-    connect(ui->problems_button, &QPushButton::clicked, this, &MainWindow::onProblemsButtonClicked);
-    connect(ui->user_button, &QPushButton::clicked, this, &MainWindow::onUserButtonClicked);
-}
-
-bool MainWindow::isSidebarCollapsed() const
-{
-    if (!ui->splitter)
-        return true;
-
-    QList<int> sizes = ui->splitter->sizes();
-    return sizes.size() > 1 && sizes[1] == 0;
-}
-
-void MainWindow::toggleSidebar(int stackIndex)
-{
-    if (!ui->splitter || !ui->stackedWidget_2)
-        return;
-
-    bool isCollapsed = isSidebarCollapsed();
-    int currentIndex = ui->stackedWidget_2->currentIndex();
-
-    if (isCollapsed)
-    {
-        // Está colapsada, expandir y cambiar al índice solicitado
-        QList<int> sizes;
-        sizes << ui->splitter->width() * 0.6 << ui->splitter->width() * 0.4;
-        ui->splitter->setSizes(sizes);
-        ui->stackedWidget_2->setCurrentIndex(stackIndex);
-    }
-    else if (currentIndex == stackIndex)
-    {
-        // Está expandida mostrando el mismo contenido, colapsar
-        QList<int> sizes;
-        sizes << ui->splitter->width() << 0;
-        ui->splitter->setSizes(sizes);
-    }
-    else
-    {
-        // Está expandida mostrando otro contenido, solo cambiar el índice
-        ui->stackedWidget_2->setCurrentIndex(stackIndex);
-    }
-}
-
-void MainWindow::onProblemsButtonClicked()
-{
-    toggleSidebar(1); // problem_space está en el índice 1
-}
-
-void MainWindow::onUserButtonClicked()
-{
-    toggleSidebar(0); // user_space está en el índice 0
 }
