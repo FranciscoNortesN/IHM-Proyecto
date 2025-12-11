@@ -8,6 +8,7 @@
 class MapOverlayPanel;
 
 class Carta;
+class SelecPro;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -39,5 +40,10 @@ private:
     bool loadMapFromFile(const QString &filePath);
     void handleOverlayDrag(const QPoint &delta);
     void setupShortcuts();
+
+private slots:
+    void onProblemButtonClicked();
+    void onStatsButtonClicked();
+    void onHelpButtonClicked();
 };
 #endif // MAINWINDOW_H

@@ -3,6 +3,10 @@
 
 #include "carta.h"
 #include "mapoverlaypanel.h"
+#include "problem.h"
+#include "selecpro.h"
+#include "stats.h"
+#include "help.h"
 
 #include <QDebug>
 #include <QColor>
@@ -21,6 +25,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupMapView();
     setupOverlayPanel();
+
+    connect(ui->problem_button, &QPushButton::clicked, this, &MainWindow::onProblemButtonClicked);
+    connect(ui->stats_button, &QPushButton::clicked, this, &MainWindow::onStatsButtonClicked);
+    connect(ui->help_button, &QPushButton::clicked, this, &MainWindow::onHelpButtonClicked);
 
     if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Estrecho de Gibraltar")))
     {
@@ -288,4 +296,28 @@ void MainWindow::setupShortcuts()
 
     bind(QKeySequence(Qt::CTRL | Qt::Key_O), [this]()
          { promptForMapChange(); });
+}
+
+void MainWindow::onProblemButtonClicked()
+{
+    SelecPro *selecProWindow = new SelecPro(nullptr);
+    selecProWindow->setAttribute(Qt::WA_DeleteOnClose);
+    selecProWindow->setWindowFlags(Qt::Window);
+    selecProWindow->show();
+}
+
+void MainWindow::onStatsButtonClicked()
+{
+    Stats *statsWindow = new Stats(nullptr);
+    statsWindow->setAttribute(Qt::WA_DeleteOnClose);
+    statsWindow->setWindowFlags(Qt::Window);
+    statsWindow->show();
+}
+
+void MainWindow::onHelpButtonClicked()
+{
+    Help *helpWindow = new Help(nullptr);
+    helpWindow->setAttribute(Qt::WA_DeleteOnClose);
+    helpWindow->setWindowFlags(Qt::Window);
+    helpWindow->show();
 }

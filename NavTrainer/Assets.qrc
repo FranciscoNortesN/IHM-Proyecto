@@ -20,5 +20,6 @@
         <file>icons/problemas.svg</file>
         <file>icons/stats.svg</file>
         <file>icons/help.svg</file>
+        <file>icons/randomize.svg</file>
     </qresource>
 </RCC>

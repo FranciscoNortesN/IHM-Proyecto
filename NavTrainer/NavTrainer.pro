@@ -10,18 +10,30 @@ CONFIG += c++17
 
 SOURCES += \
     carta.cpp \
+    help.cpp \
     main.cpp \
     mainwindow.cpp \
-    mapoverlaypanel.cpp
+    mapoverlaypanel.cpp \
+    problem.cpp \
+    selecpro.cpp \
+    stats.cpp
 
 HEADERS += \
     carta.h \
+    help.h \
     mainwindow.h \
     mapoverlaypanel.h \
-    maptooltypes.h
+    maptooltypes.h \
+    problem.h \
+    selecpro.h \
+    stats.h
 
 FORMS += \
-    mainwindow.ui
+    help.ui \
+    mainwindow.ui \
+    problem.ui \
+    selecpro.ui \
+    stats.ui
 
 TRANSLATIONS += \
     NavTrainer_es_ES.ts

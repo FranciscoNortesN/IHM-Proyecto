@@ -61,7 +61,7 @@
         <number>0</number>
        </property>
        <item row="4" column="0">
-        <widget class="QPushButton" name="help_buttom">
+        <widget class="QPushButton" name="help_button">
          <property name="styleSheet">
           <string notr="true">border: none;
 padding:10px;</string>
