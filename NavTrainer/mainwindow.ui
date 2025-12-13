@@ -42,7 +42,7 @@
        </sizepolicy>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(62, 62, 62);</string>
+       <string notr="true">background-color: rgb(13, 30, 46);</string>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <property name="leftMargin">

@@ -9,6 +9,7 @@ class MapOverlayPanel;
 
 class Carta;
 class SelecPro;
+class User;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -30,6 +31,7 @@ private:
     Carta *m_carta = nullptr;
     MapOverlayPanel *m_overlayPanel = nullptr;
     QString m_currentMapTitle;
+    bool m_userFirstLaunch = true;
 
     void setupMapView();
     void setupOverlayPanel();
@@ -45,5 +47,6 @@ private slots:
     void onProblemButtonClicked();
     void onStatsButtonClicked();
     void onHelpButtonClicked();
+    void onUserButtonClicked();
 };
 #endif // MAINWINDOW_H

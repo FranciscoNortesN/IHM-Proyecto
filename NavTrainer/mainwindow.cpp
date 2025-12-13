@@ -7,6 +7,7 @@
 #include "selecpro.h"
 #include "stats.h"
 #include "help.h"
+#include "user.h"
 
 #include <QDebug>
 #include <QColor>
@@ -29,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->problem_button, &QPushButton::clicked, this, &MainWindow::onProblemButtonClicked);
     connect(ui->stats_button, &QPushButton::clicked, this, &MainWindow::onStatsButtonClicked);
     connect(ui->help_button, &QPushButton::clicked, this, &MainWindow::onHelpButtonClicked);
+    connect(ui->user_button, &QPushButton::clicked, this, &MainWindow::onUserButtonClicked);
 
     if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Estrecho de Gibraltar")))
     {
@@ -300,7 +302,7 @@ void MainWindow::setupShortcuts()
 
 void MainWindow::onProblemButtonClicked()
 {
-    SelecPro *selecProWindow = new SelecPro(nullptr);
+    SelecPro *selecProWindow = new SelecPro(this);
     selecProWindow->setAttribute(Qt::WA_DeleteOnClose);
     selecProWindow->setWindowFlags(Qt::Window);
     selecProWindow->show();
@@ -308,7 +310,7 @@ void MainWindow::onProblemButtonClicked()
 
 void MainWindow::onStatsButtonClicked()
 {
-    Stats *statsWindow = new Stats(nullptr);
+    Stats *statsWindow = new Stats(this);
     statsWindow->setAttribute(Qt::WA_DeleteOnClose);
     statsWindow->setWindowFlags(Qt::Window);
     statsWindow->show();
@@ -316,8 +318,29 @@ void MainWindow::onStatsButtonClicked()
 
 void MainWindow::onHelpButtonClicked()
 {
-    Help *helpWindow = new Help(nullptr);
+    Help *helpWindow = new Help(this);
     helpWindow->setAttribute(Qt::WA_DeleteOnClose);
     helpWindow->setWindowFlags(Qt::Window);
     helpWindow->show();
+}
+
+void MainWindow::onUserButtonClicked()
+{
+    User *userWindow = new User(this);
+    userWindow->setAttribute(Qt::WA_DeleteOnClose);
+    userWindow->setWindowFlags(Qt::Window);
+    
+    // Alternar entre modo registro (primera vez) y modo iniciar sesión (segunda vez)
+    if (m_userFirstLaunch)
+    {
+        userWindow->setCurrentIndex(0); // Página de registro
+        m_userFirstLaunch = false;
+    }
+    else
+    {
+        userWindow->setCurrentIndex(1); // Página de iniciar sesión
+        m_userFirstLaunch = true; // Resetear para la próxima vez
+    }
+    
+    userWindow->show();
 }

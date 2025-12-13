@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>845</width>
+    <width>865</width>
     <height>552</height>
    </rect>
   </property>
@@ -39,7 +39,8 @@
      </property>
      <property name="styleSheet">
       <string notr="true">font: 22pt &quot;Noto Sans&quot;;
-background-color: rgb(79, 79, 79);</string>
+color: rgb(255, 255, 255);
+background-color: rgb(13, 30, 46);</string>
      </property>
      <property name="text">
       <string>Estadísticas</string>
@@ -260,7 +261,7 @@ color: rgb(0, 0, 0);</string>
             <item row="0" column="0">
              <widget class="QLabel" name="label_9">
               <property name="text">
-               <string> </string>
+               <string/>
               </property>
              </widget>
             </item>

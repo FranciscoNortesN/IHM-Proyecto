@@ -21,5 +21,10 @@
         <file>icons/stats.svg</file>
         <file>icons/help.svg</file>
         <file>icons/randomize.svg</file>
+        <file>help/introduccion.md</file>
+        <file>help/registro.md</file>
+        <file>help/mapa.md</file>
+        <file>help/problemas.md</file>
+        <file>help/estadisticas.md</file>
     </qresource>
 </RCC>

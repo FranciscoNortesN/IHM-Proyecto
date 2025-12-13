@@ -16,7 +16,8 @@ SOURCES += \
     mapoverlaypanel.cpp \
     problem.cpp \
     selecpro.cpp \
-    stats.cpp
+    stats.cpp \
+    user.cpp
 
 HEADERS += \
     carta.h \
@@ -26,14 +27,16 @@ HEADERS += \
     maptooltypes.h \
     problem.h \
     selecpro.h \
-    stats.h
+    stats.h \
+    user.h
 
 FORMS += \
     help.ui \
     mainwindow.ui \
     problem.ui \
     selecpro.ui \
-    stats.ui
+    stats.ui \
+    user.ui
 
 TRANSLATIONS += \
     NavTrainer_es_ES.ts
