@@ -1,12 +1,16 @@
 #include "problem.h"
 #include "ui_problem.h"
+#include "NavigationDAO.h"
+#include "NavDAOException.h"
 #include <QMessageBox>
 #include <QRadioButton>
 
-ProblemWidget::ProblemWidget(const Problem &problem, QWidget *parent) :
+ProblemWidget::ProblemWidget(const Problem &problem, NavigationDAO *dao, const QString &userNickname, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::problem),
-    m_problem(problem)
+    m_problem(problem),
+    m_dao(dao),
+    m_userNickname(userNickname)
 {
     ui->setupUi(this);
     
@@ -42,15 +46,7 @@ void ProblemWidget::setupProblem()
     QVector<Answer> answers = m_problem.answers();
     QList<QRadioButton*> radioButtons = {ui->radioButton, ui->radioButton_2, ui->radioButton_3, ui->radioButton_4};
     
-    // Debug: mostrar todas las respuestas y su validez
-    QString debugInfo = "Respuestas del problema:\n";
-    for (int i = 0; i < answers.size(); ++i) {
-        debugInfo += QString("%1. '%2' - Correcta: %3\n")
-            .arg(i + 1)
-            .arg(answers[i].text())
-            .arg(answers[i].validity() ? "SÍ" : "NO");
-    }
-    QMessageBox::information(this, tr("Debug - Respuestas"), debugInfo);
+
     
     for (int i = 0; i < radioButtons.size(); ++i) {
         if (i < answers.size() && !answers[i].text().isEmpty()) {
@@ -84,13 +80,29 @@ void ProblemWidget::onCheckButtonClicked()
     if (isCorrect) {
         // Sombreado verde para respuesta correcta
         selectedButton->setStyleSheet("QRadioButton { background-color: #90EE90; padding: 5px; }");
-        QMessageBox::information(this, tr("¡Correcto!"), tr("Respuesta correcta"));
     } else {
         // Sombreado rojo para respuesta incorrecta
         selectedButton->setStyleSheet("QRadioButton { background-color: #FFB6C1; padding: 5px; }");
-        QMessageBox::information(this, tr("Incorrecto"), tr("Respuesta incorrecta."));
     }
+    
+    // Registrar resultado en estadísticas
+    recordResult(isCorrect);
     
     // Deshabilitar el botón de comprobar
     ui->pushButton->setEnabled(false);
+}
+
+void ProblemWidget::recordResult(bool isCorrect)
+{
+    if (!m_dao || m_userNickname.isEmpty()) {
+        return;
+    }
+    
+    try {
+        QString problemText = isCorrect ? QString() : m_problem.text();
+        Session session(QDateTime::currentDateTime(), isCorrect ? 1 : 0, isCorrect ? 0 : 1, problemText);
+        m_dao->addSession(m_userNickname, session);
+    } catch (const NavDAOException &e) {
+        qWarning() << "Error al registrar estadísticas:" << e.what();
+    }
 }

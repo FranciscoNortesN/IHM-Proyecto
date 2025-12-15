@@ -15,7 +15,7 @@ class SelecPro : public QWidget
     Q_OBJECT
 
 public:
-    explicit SelecPro(NavigationDAO *dao, QWidget *parent = nullptr);
+    explicit SelecPro(NavigationDAO *dao, const QString &userNickname, QWidget *parent = nullptr);
     ~SelecPro();
 
 private slots:
@@ -25,6 +25,7 @@ private slots:
 private:
     Ui::SelecPro *ui;
     NavigationDAO *m_dao;
+    QString m_userNickname;
     QVector<Problem> m_problems;
     
     void loadProblems();

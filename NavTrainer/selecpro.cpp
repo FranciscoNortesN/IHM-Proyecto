@@ -7,15 +7,16 @@
 #include <QRandomGenerator>
 #include <QSize>
 
-SelecPro::SelecPro(NavigationDAO *dao, QWidget *parent)
+SelecPro::SelecPro(NavigationDAO *dao, const QString &userNickname, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::SelecPro)
     , m_dao(dao)
+    , m_userNickname(userNickname)
 {
     ui->setupUi(this);
     
     connect(ui->pushButton, &QPushButton::clicked, this, &SelecPro::onRandomButtonClicked);
-    connect(ui->listWidget, &QListWidget::itemDoubleClicked, this, &SelecPro::onProblemSelected);
+    connect(ui->listWidget, &QListWidget::itemClicked, this, &SelecPro::onProblemSelected);
     
     // Configurar apariencia de la lista
     ui->listWidget->setStyleSheet(
@@ -136,7 +137,7 @@ void SelecPro::onRandomButtonClicked()
     
     // Abrir directamente la ventana del problema aleatorio
     const Problem &selectedProblem = m_problems[randomIndex];
-    ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, this);
+    ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, this);
     problemWindow->setAttribute(Qt::WA_DeleteOnClose);
     problemWindow->setWindowFlags(Qt::Window);
     problemWindow->setWindowTitle(tr("Ejercicio %1 (Aleatorio)").arg(randomIndex + 1));
@@ -154,7 +155,7 @@ void SelecPro::onProblemSelected()
     if (problemIndex >= 0 && problemIndex < m_problems.size()) {
         const Problem &selectedProblem = m_problems[problemIndex];
         
-        ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, this);
+        ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, this);
         problemWindow->setAttribute(Qt::WA_DeleteOnClose);
         problemWindow->setWindowFlags(Qt::Window);
         problemWindow->setWindowTitle(tr("Ejercicio %1").arg(problemIndex + 1));

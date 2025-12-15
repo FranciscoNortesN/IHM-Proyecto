@@ -311,7 +311,7 @@ void MainWindow::setupShortcuts()
 
 void MainWindow::onProblemButtonClicked()
 {
-    SelecPro *selecProWindow = new SelecPro(m_dao, this);
+    SelecPro *selecProWindow = new SelecPro(m_dao, m_currentUserNickname, this);
     selecProWindow->setAttribute(Qt::WA_DeleteOnClose);
     selecProWindow->setWindowFlags(Qt::Window);
     selecProWindow->show();
@@ -319,7 +319,7 @@ void MainWindow::onProblemButtonClicked()
 
 void MainWindow::onStatsButtonClicked()
 {
-    Stats *statsWindow = new Stats(this);
+    Stats *statsWindow = new Stats(m_dao, m_currentUserNickname, this);
     statsWindow->setAttribute(Qt::WA_DeleteOnClose);
     statsWindow->setWindowFlags(Qt::Window);
     statsWindow->show();

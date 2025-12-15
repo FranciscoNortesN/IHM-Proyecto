@@ -26,17 +26,19 @@ private:
 class Session {
 public:
     Session() = default;
-    Session(const QDateTime &ts, int hits, int faults)
-        : m_timeStamp(ts), m_hits(hits), m_faults(faults) {}
+    Session(const QDateTime &ts, int hits, int faults, const QString &problemText = QString())
+        : m_timeStamp(ts), m_hits(hits), m_faults(faults), m_problemText(problemText) {}
 
     const QDateTime &timeStamp() const { return m_timeStamp; }
     int hits() const { return m_hits; }
     int faults() const { return m_faults; }
+    const QString &problemText() const { return m_problemText; }
 
 private:
     QDateTime m_timeStamp;
     int       m_hits   = 0;
     int       m_faults = 0;
+    QString   m_problemText;
 };
 
 class Problem {
