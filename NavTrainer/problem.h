@@ -7,13 +7,13 @@ namespace Ui {
 class problem;
 }
 
-class Problem : public QWidget
+class ProblemWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit Problem(QWidget *parent = nullptr);
-    ~Problem();
+    explicit ProblemWidget(QWidget *parent = nullptr);
+    ~ProblemWidget();
 
 private:
     Ui::problem *ui;

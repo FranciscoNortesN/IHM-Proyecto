@@ -8,6 +8,8 @@
 #include "stats.h"
 #include "help.h"
 #include "user.h"
+#include "login.h"
+#include "navlib/navigationdao.h"
 
 #include <QDebug>
 #include <QColor>
@@ -23,6 +25,10 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    
+    // Inicializar la base de datos
+    // Usar una ruta relativa o absoluta al archivo de base de datos
+    m_dao = new NavigationDAO(QStringLiteral("navtrainer.db"));
 
     setupMapView();
     setupOverlayPanel();
@@ -326,9 +332,44 @@ void MainWindow::onHelpButtonClicked()
 
 void MainWindow::onUserButtonClicked()
 {
-    User *userWindow = new User(this);
-    userWindow->setAttribute(Qt::WA_DeleteOnClose);
-    userWindow->setWindowFlags(Qt::Window);
+    // Si los widgets ya existen, solo mostrar el login
+    if (m_loginWidget) {
+        m_loginWidget->show();
+        m_loginWidget->raise();
+        m_loginWidget->activateWindow();
+        return;
+    }
     
-    userWindow->show();
+    // Crear los widgets de login y registro
+    m_loginWidget = new LoginWidget(m_dao, nullptr);
+    m_registerWidget = new RegisterWidget(m_dao, nullptr);
+    
+    // Conectar señales para cambiar entre pantallas
+    connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
+        m_loginWidget->hide();
+        m_registerWidget->show();
+        m_registerWidget->raise();
+        m_registerWidget->activateWindow();
+    });
+    
+    connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
+        m_registerWidget->hide();
+        m_loginWidget->show();
+        m_loginWidget->raise();
+        m_loginWidget->activateWindow();
+    });
+    
+    // Limpiar cuando se cierren las ventanas
+    connect(m_loginWidget, &QWidget::destroyed, this, [this]() {
+        m_loginWidget = nullptr;
+    });
+    
+    connect(m_registerWidget, &QWidget::destroyed, this, [this]() {
+        m_registerWidget = nullptr;
+    });
+    
+    // Mostrar el login inicialmente
+    m_loginWidget->setAttribute(Qt::WA_DeleteOnClose);
+    m_loginWidget->setWindowFlags(Qt::Window);
+    m_loginWidget->show();
 }

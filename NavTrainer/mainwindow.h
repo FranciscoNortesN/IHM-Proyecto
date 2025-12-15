@@ -6,6 +6,9 @@
 #include <QString>
 
 class MapOverlayPanel;
+class NavigationDAO;
+class LoginWidget;
+class RegisterWidget;
 
 class Carta;
 class SelecPro;
@@ -32,6 +35,9 @@ private:
     MapOverlayPanel *m_overlayPanel = nullptr;
     QString m_currentMapTitle;
     bool m_userFirstLaunch = true;
+    NavigationDAO *m_dao = nullptr;
+    LoginWidget *m_loginWidget = nullptr;
+    RegisterWidget *m_registerWidget = nullptr;
 
     void setupMapView();
     void setupOverlayPanel();

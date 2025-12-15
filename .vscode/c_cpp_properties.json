@@ -1,19 +1,43 @@
 {
-  "configurations": [
-    {
-      "name": "macos-clang-arm64",
-      "includePath": [
-        "${workspaceFolder}/**"
-      ],
-      "defines": [],
-      "compilerPath": "/usr/bin/clang",
-      "cStandard": "${default}",
-      "cppStandard": "${default}",
-      "intelliSenseMode": "macos-clang-arm64",
-      "compileCommands": [
-        "${workspaceFolder}/NavTrainer/build/Desktop-Debug/.qtc_clangd/compile_commands.json"
-      ]
-    }
-  ],
-  "version": 4
+    "configurations": [
+        {
+            "name": "macos-clang-arm64",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "${default}",
+            "cppStandard": "${default}",
+            "intelliSenseMode": "macos-clang-arm64",
+            "compileCommands": "${workspaceFolder}/NavTrainer/build/Desktop-Debug/.qtc_clangd/compile_commands.json"
+        },
+        {
+            "name": "windows-qt-mingw",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Qt/6.10.0/mingw_64/include",
+                "C:/Qt/6.10.0/mingw_64/include/QtCore",
+                "C:/Qt/6.10.0/mingw_64/include/QtGui",
+                "C:/Qt/6.10.0/mingw_64/include/QtWidgets",
+                "C:/Qt/6.10.0/mingw_64/include/QtNetwork",
+                "C:/Qt/6.10.0/mingw_64/include/QtSql",
+                "C:/Qt/6.10.0/mingw_64/include/QtOpenGL",
+                "C:/Qt/6.10.0/mingw_64/mkspecs/win32-g++"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "QT_CORE_LIB",
+                "QT_GUI_LIB",
+                "QT_WIDGETS_LIB"
+            ],
+            "compilerPath": "C:/Qt/Tools/mingw1120_64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
 }

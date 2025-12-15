@@ -2,21 +2,41 @@
 #define LOGIN_H
 
 #include <QWidget>
+#include <QString>
+#include <QImage>
+#include "navlib/navigationdao.h"
+#include "navlib/navtypes.h"
 
 namespace Ui {
 class Login;
 }
 
-class Login : public QWidget
+class RegisterWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit Login(QWidget *parent = nullptr);
-    ~Login();
+    explicit RegisterWidget(NavigationDAO *dao, QWidget *parent = nullptr);
+    ~RegisterWidget();
+
+private slots:
+    void onSeleccionarAvatar();
+    void onCrearCuenta();
+    void onYaTengoCuenta();
 
 private:
     Ui::Login *ui;
+    NavigationDAO *m_dao;
+    QImage m_avatarImage;
+    
+    bool validarFormulario();
+    bool validarCorreo(const QString &correo);
+    bool validarContrasena(const QString &contrasena);
+    bool nickNameExiste(const QString &nickName);
+
+signals:
+    void cuentaCreada(const QString &nickName);
+    void irAIniciarSesion();
 };
 
 #endif // LOGIN_H
