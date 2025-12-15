@@ -30,8 +30,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     
     // Inicializar la base de datos
-    // Usar una ruta relativa o absoluta al archivo de base de datos
-    m_dao = new NavigationDAO(QStringLiteral("navtrainer.db"));
+    // Usar la base de datos en la carpeta data
+    m_dao = new NavigationDAO(QStringLiteral("data/navdb.sqlite"));
 
     setupMapView();
     setupOverlayPanel();
@@ -311,7 +311,7 @@ void MainWindow::setupShortcuts()
 
 void MainWindow::onProblemButtonClicked()
 {
-    SelecPro *selecProWindow = new SelecPro(this);
+    SelecPro *selecProWindow = new SelecPro(m_dao, this);
     selecProWindow->setAttribute(Qt::WA_DeleteOnClose);
     selecProWindow->setWindowFlags(Qt::Window);
     selecProWindow->show();

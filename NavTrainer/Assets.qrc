@@ -26,5 +26,6 @@
         <file>help/mapa.md</file>
         <file>help/problemas.md</file>
         <file>help/estadisticas.md</file>
+        <file>data/navdb.sqlite</file>
     </qresource>
 </RCC>

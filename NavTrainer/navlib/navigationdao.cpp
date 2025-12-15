@@ -2,12 +2,26 @@
 
 #include <QSqlDatabase>
 #include <QVariant>
+#include <QFile>
+#include <QDir>
+#include <QFileInfo>
 
 NavigationDAO::NavigationDAO(const QString &dbFilePath)
     : m_dbFilePath(dbFilePath)
 {
     m_connectionName = QStringLiteral("navdb_%1")
         .arg(reinterpret_cast<quintptr>(this));
+
+    // Copiar base de datos desde recursos si no existe
+    if (!QFile::exists(dbFilePath)) {
+        QFile templateDb(":/assets/data/navdb.sqlite");
+        if (templateDb.exists()) {
+            // Crear directorio data si no existe
+            QDir().mkpath(QFileInfo(dbFilePath).absolutePath());
+            templateDb.copy(dbFilePath);
+            QFile::setPermissions(dbFilePath, QFile::WriteOwner | QFile::ReadOwner);
+        }
+    }
 
     open();
     createTablesIfNeeded();
@@ -387,7 +401,7 @@ QString NavigationDAO::boolToDb(bool v) const
 
 bool NavigationDAO::boolFromDb(const QString &s) const
 {
-    return (s == QLatin1String("1"));
+    return (s == QLatin1String("1") || s.toInt() == 1);
 }
 
 [[noreturn]] void NavigationDAO::throwSqlError(const QString &where, const QSqlError &err) const
