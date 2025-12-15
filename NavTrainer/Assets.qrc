@@ -27,5 +27,6 @@
         <file>help/problemas.md</file>
         <file>help/estadisticas.md</file>
         <file>data/navdb.sqlite</file>
+        <file>icons/pencil.svg</file>
     </qresource>
 </RCC>

@@ -1,7 +1,7 @@
 #include "problem.h"
 #include "ui_problem.h"
-#include "NavigationDAO.h"
-#include "NavDAOException.h"
+#include "navigationdao.h"
+#include "navdaoexception.h"
 #include <QMessageBox>
 #include <QRadioButton>
 

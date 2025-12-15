@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>450</width>
-    <height>640</height>
+    <width>433</width>
+    <height>704</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -100,7 +100,13 @@
          <string notr="true">border: 2px solid gray; border-radius: 60px; background-color: lightgray;</string>
         </property>
         <property name="text">
-         <string>Avatar</string>
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="Assets.qrc">:/assets/icons/avatar-default.svg</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
         </property>
         <property name="alignment">
          <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -120,6 +126,16 @@
         </property>
         <property name="text">
          <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="Assets.qrc">
+          <normaloff>:/assets/icons/pencil.svg</normaloff>:/assets/icons/pencil.svg</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
         </property>
        </widget>
       </widget>
@@ -398,6 +414,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="Assets.qrc"/>
+ </resources>
  <connections/>
 </ui>
