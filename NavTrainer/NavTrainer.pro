@@ -17,7 +17,9 @@ SOURCES += \
     problem.cpp \
     selecpro.cpp \
     stats.cpp \
-    user.cpp
+    user.cpp \
+    navlib/navigation.cpp \
+    navlib/navigationdao.cpp
 
 HEADERS += \
     carta.h \
@@ -28,7 +30,11 @@ HEADERS += \
     problem.h \
     selecpro.h \
     stats.h \
-    user.h
+    user.h \
+    navlib/navigation.h \
+    navlib/navigationdao.h \
+    navlib/navdaoexception.h \
+    navlib/navtypes.h
 
 FORMS += \
     help.ui \
@@ -50,3 +56,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RESOURCES += \
     Assets.qrc
+
+# Incluir directorio de navlib para los includes
+INCLUDEPATH += $$PWD/navlib
+
+# Agregar SQL para usar la base de datos de navegación
+QT += sql
