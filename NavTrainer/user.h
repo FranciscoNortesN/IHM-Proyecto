@@ -1,13 +1,13 @@
 #ifndef USER_H
 #define USER_H
 
-#include <QStackedWidget>
+#include <QWidget>
 
 namespace Ui {
 class User;
 }
 
-class User : public QStackedWidget
+class User : public QWidget
 {
     Q_OBJECT
 

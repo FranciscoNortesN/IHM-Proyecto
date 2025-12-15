@@ -330,17 +330,5 @@ void MainWindow::onUserButtonClicked()
     userWindow->setAttribute(Qt::WA_DeleteOnClose);
     userWindow->setWindowFlags(Qt::Window);
     
-    // Alternar entre modo registro (primera vez) y modo iniciar sesión (segunda vez)
-    if (m_userFirstLaunch)
-    {
-        userWindow->setCurrentIndex(0); // Página de registro
-        m_userFirstLaunch = false;
-    }
-    else
-    {
-        userWindow->setCurrentIndex(1); // Página de iniciar sesión
-        m_userFirstLaunch = true; // Resetear para la próxima vez
-    }
-    
     userWindow->show();
 }

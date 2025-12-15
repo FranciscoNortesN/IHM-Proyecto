@@ -11,33 +11,36 @@ CONFIG += c++17
 SOURCES += \
     carta.cpp \
     help.cpp \
+    login.cpp \
     main.cpp \
     mainwindow.cpp \
     mapoverlaypanel.cpp \
     problem.cpp \
     selecpro.cpp \
     stats.cpp \
-    user.cpp \
     navlib/navigation.cpp \
-    navlib/navigationdao.cpp
+    navlib/navigationdao.cpp \
+    user.cpp
 
 HEADERS += \
     carta.h \
     help.h \
+    login.h \
     mainwindow.h \
     mapoverlaypanel.h \
     maptooltypes.h \
     problem.h \
     selecpro.h \
     stats.h \
-    user.h \
     navlib/navigation.h \
     navlib/navigationdao.h \
     navlib/navdaoexception.h \
-    navlib/navtypes.h
+    navlib/navtypes.h \
+    user.h
 
 FORMS += \
     help.ui \
+    login.ui \
     mainwindow.ui \
     problem.ui \
     selecpro.ui \
