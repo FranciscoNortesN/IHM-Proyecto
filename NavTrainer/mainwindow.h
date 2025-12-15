@@ -9,6 +9,7 @@ class MapOverlayPanel;
 class NavigationDAO;
 class LoginWidget;
 class RegisterWidget;
+class UserManagement;
 
 class Carta;
 class SelecPro;
@@ -38,6 +39,8 @@ private:
     NavigationDAO *m_dao = nullptr;
     LoginWidget *m_loginWidget = nullptr;
     RegisterWidget *m_registerWidget = nullptr;
+    UserManagement *m_userManagement = nullptr;
+    QString m_currentUserNickname;
 
     void setupMapView();
     void setupOverlayPanel();
@@ -48,6 +51,7 @@ private:
     bool loadMapFromFile(const QString &filePath);
     void handleOverlayDrag(const QPoint &delta);
     void setupShortcuts();
+    void updateUserAvatar(const QString &nickName);
 
 private slots:
     void onProblemButtonClicked();

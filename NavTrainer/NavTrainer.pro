@@ -18,6 +18,7 @@ SOURCES += \
     problem.cpp \
     selecpro.cpp \
     stats.cpp \
+    usermanagement.cpp \
     navlib/navigation.cpp \
     navlib/navigationdao.cpp \
     user.cpp
@@ -32,6 +33,7 @@ HEADERS += \
     problem.h \
     selecpro.h \
     stats.h \
+    usermanagement.h \
     navlib/navigation.h \
     navlib/navigationdao.h \
     navlib/navdaoexception.h \
@@ -45,7 +47,8 @@ FORMS += \
     problem.ui \
     selecpro.ui \
     stats.ui \
-    user.ui
+    user.ui \
+    usermanagement.ui
 
 TRANSLATIONS += \
     NavTrainer_es_ES.ts

@@ -4,6 +4,8 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QDate>
+#include <QPainter>
+#include <QPainterPath>
 
 RegisterWidget::RegisterWidget(NavigationDAO *dao, QWidget *parent)
     : QWidget(parent)
@@ -36,15 +38,42 @@ void RegisterWidget::onSeleccionarAvatar()
         m_avatarImage.load(fileName);
         
         if (!m_avatarImage.isNull()) {
-            // Escalar la imagen para que se ajuste al label circular
-            QPixmap scaledPixmap = QPixmap::fromImage(m_avatarImage).scaled(
-                ui->lblAvatar->size(),
+            int targetSize = ui->lblAvatar->width();
+            
+            // Escalar la imagen para que llene completamente el círculo
+            QPixmap originalPixmap = QPixmap::fromImage(m_avatarImage);
+            QPixmap scaledPixmap = originalPixmap.scaled(
+                targetSize, targetSize,
                 Qt::KeepAspectRatioByExpanding,
                 Qt::SmoothTransformation
             );
             
-            ui->lblAvatar->setPixmap(scaledPixmap);
-            ui->lblAvatar->setScaledContents(true);
+            // Centrar y recortar la imagen si es más grande
+            QPixmap centeredPixmap = scaledPixmap;
+            if (scaledPixmap.width() > targetSize || scaledPixmap.height() > targetSize) {
+                int x = (scaledPixmap.width() - targetSize) / 2;
+                int y = (scaledPixmap.height() - targetSize) / 2;
+                centeredPixmap = scaledPixmap.copy(x, y, targetSize, targetSize);
+            }
+            
+            // Crear una máscara circular
+            QPixmap roundedPixmap(targetSize, targetSize);
+            roundedPixmap.fill(Qt::transparent);
+            
+            QPainter painter(&roundedPixmap);
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setRenderHint(QPainter::SmoothPixmapTransform);
+            
+            // Dibujar un círculo y usarlo como máscara
+            QPainterPath path;
+            path.addEllipse(0, 0, targetSize, targetSize);
+            painter.setClipPath(path);
+            painter.drawPixmap(0, 0, centeredPixmap);
+            painter.end();
+            
+            ui->lblAvatar->setPixmap(roundedPixmap);
+            ui->lblAvatar->setScaledContents(false);
+            ui->lblAvatar->setText("");  // Quitar el texto "Avatar"
         }
     }
 }
@@ -98,6 +127,9 @@ void RegisterWidget::onCrearCuenta()
         m_avatarImage = QImage();
         ui->lblAvatar->setPixmap(QPixmap());
         ui->lblAvatar->setText("Avatar");
+        
+        // Cerrar la ventana
+        this->close();
         
     } catch (const NavDAOException &e) {
         QMessageBox::critical(

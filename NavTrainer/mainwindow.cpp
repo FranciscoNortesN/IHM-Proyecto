@@ -9,6 +9,7 @@
 #include "help.h"
 #include "user.h"
 #include "login.h"
+#include "usermanagement.h"
 #include "navlib/navigationdao.h"
 
 #include <QDebug>
@@ -20,6 +21,8 @@
 #include <QMessageBox>
 #include <QShortcut>
 #include <QVBoxLayout>
+#include <QPainter>
+#include <QPainterPath>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -332,6 +335,40 @@ void MainWindow::onHelpButtonClicked()
 
 void MainWindow::onUserButtonClicked()
 {
+    // Si ya hay usuario logueado, mostrar gestión de usuario
+    if (!m_currentUserNickname.isEmpty()) {
+        if (m_userManagement) {
+            m_userManagement->show();
+            m_userManagement->raise();
+            m_userManagement->activateWindow();
+            return;
+        }
+        
+        // Crear la ventana de gestión
+        m_userManagement = new UserManagement(m_dao, m_currentUserNickname, nullptr);
+        
+        // Conectar señal cuando se actualice el avatar
+        connect(m_userManagement, &UserManagement::avatarActualizado, this, [this](const QString &nickName) {
+            updateUserAvatar(nickName);
+        });
+        
+        connect(m_userManagement, &UserManagement::usuarioDesconectado, this, [this]() {
+            m_currentUserNickname.clear();
+            // Restablecer icono del botón a default
+            ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
+            m_userManagement = nullptr;
+        });
+        
+        connect(m_userManagement, &QWidget::destroyed, this, [this]() {
+            m_userManagement = nullptr;
+        });
+        
+        m_userManagement->setAttribute(Qt::WA_DeleteOnClose);
+        m_userManagement->setWindowFlags(Qt::Window);
+        m_userManagement->show();
+        return;
+    }
+    
     // Si los widgets ya existen, solo mostrar el login
     if (m_loginWidget) {
         m_loginWidget->show();
@@ -343,6 +380,12 @@ void MainWindow::onUserButtonClicked()
     // Crear los widgets de login y registro
     m_loginWidget = new LoginWidget(m_dao, nullptr);
     m_registerWidget = new RegisterWidget(m_dao, nullptr);
+    
+    // Conectar señal de inicio de sesión exitoso
+    connect(m_loginWidget, &LoginWidget::sesionIniciada, this, [this](const QString &nickName) {
+        m_currentUserNickname = nickName;
+        updateUserAvatar(nickName);
+    });
     
     // Conectar señales para cambiar entre pantallas
     connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
@@ -372,4 +415,46 @@ void MainWindow::onUserButtonClicked()
     m_loginWidget->setAttribute(Qt::WA_DeleteOnClose);
     m_loginWidget->setWindowFlags(Qt::Window);
     m_loginWidget->show();
+}
+
+void MainWindow::updateUserAvatar(const QString &nickName)
+{
+    if (!m_dao) {
+        return;
+    }
+    
+    try {
+        QMap<QString, ::User> usuarios = m_dao->loadUsers();
+        
+        if (usuarios.contains(nickName)) {
+            ::User usuario = usuarios.value(nickName);
+            QImage avatarImage = usuario.avatar();
+            
+            if (!avatarImage.isNull()) {
+                int targetSize = 68;
+                
+                // Recortar la imagen a un cuadrado (lado más pequeño)
+                QPixmap originalPixmap = QPixmap::fromImage(avatarImage);
+                int minSize = qMin(originalPixmap.width(), originalPixmap.height());
+                
+                // Centrar y recortar a cuadrado
+                int x = (originalPixmap.width() - minSize) / 2;
+                int y = (originalPixmap.height() - minSize) / 2;
+                QPixmap squarePixmap = originalPixmap.copy(x, y, minSize, minSize);
+                
+                // Escalar al tamaño del botón
+                QPixmap scaledPixmap = squarePixmap.scaled(
+                    targetSize, targetSize,
+                    Qt::KeepAspectRatio,
+                    Qt::SmoothTransformation
+                );
+                
+                // Establecer el icono del botón (cuadrado)
+                ui->user_button->setIcon(QIcon(scaledPixmap));
+                ui->user_button->setIconSize(QSize(68, 68));
+            }
+        }
+    } catch (const NavDAOException &e) {
+        qWarning() << "Error al cargar avatar:" << e.what();
+    }
 }

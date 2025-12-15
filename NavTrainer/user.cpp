@@ -66,6 +66,9 @@ void LoginWidget::onIniciarSesion()
                 // Limpiar campos
                 ui->txtUsuario->clear();
                 ui->txtContrasena->clear();
+                
+                // Cerrar la ventana
+                this->close();
             }
         }
         
