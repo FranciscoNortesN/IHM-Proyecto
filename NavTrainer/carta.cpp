@@ -46,14 +46,18 @@
 class MapToolItem : public QGraphicsSvgItem
 {
 public:
-    static constexpr qreal kToolSceneScale = 1.0 / 6.0;
+    static constexpr qreal kToolSceneScale = 1.0 / 6.0 * 1.5;
 
     MapToolItem(const QString &toolId, const QString &resourcePath, Carta *view)
         : QGraphicsSvgItem(resourcePath), m_toolId(toolId), m_view(view)
     {
         setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemIsSelectable |
                  QGraphicsItem::ItemSendsGeometryChanges);
-        setScale(kToolSceneScale);
+        if (toolId == QLatin1String("tool_ruler") || toolId == QLatin1String("tool_compass")) {
+            setScale(3.0 * 1.5);
+        } else {
+            setScale(kToolSceneScale);
+        }
         setAcceptedMouseButtons(Qt::LeftButton);
         setZValue(100.0);
         setData(Carta::ToolItemDataKey, true);
@@ -107,12 +111,19 @@ protected:
         {
             m_view->handleToolDragStarted();
         }
+        // If this is the protractor and we are about to rotate, change cursor
+        if (m_toolId == QLatin1String("tool_ruler")) {
+            setCursor(Qt::SizeAllCursor); // or another cursor indicating rotation
+        }
         QGraphicsSvgItem::mousePressEvent(event);
     }
 
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
     {
         QGraphicsSvgItem::mouseReleaseEvent(event);
+        if (m_toolId == QLatin1String("tool_ruler")) {
+            unsetCursor();
+        }
         if (m_view)
         {
             m_view->handleToolDragFinished(this);
@@ -198,7 +209,7 @@ public:
         setCursor(Qt::ArrowCursor);
         
         // Override the base class scale - compass needs to be larger
-        setScale(1.0);
+        setScale(1.0 * 1.5);
         
         // Initialize compass geometry - larger for better visibility
         m_legLength = 180.0;
@@ -212,6 +223,13 @@ public:
     {
         discardArcPreview();
     }
+
+public:
+    // Public wrappers so outer code can forward events safely
+    void handleMousePress(QGraphicsSceneMouseEvent *event) { mousePressEvent(event); }
+    void handleMouseMove(QGraphicsSceneMouseEvent *event) { mouseMoveEvent(event); }
+    void handleMouseRelease(QGraphicsSceneMouseEvent *event) { mouseReleaseEvent(event); }
+    QRectF compassBoundingRect() const { return boundingRect(); }
 
 protected:
     QRectF boundingRect() const override
@@ -517,6 +535,7 @@ protected:
         if (m_drawingArc)
         {
             finalizeArcDraw();
+            unsetCursor();
             event->accept();
             return;
         }
@@ -524,6 +543,7 @@ protected:
         if (m_rotatingWhole)
         {
             m_rotatingWhole = false;
+            unsetCursor();
             event->accept();
             return;
         }
@@ -756,7 +776,7 @@ public:
         
         // Override scale - ruler SVG is very large (4872 x 348)
         // Scale to a reasonable size: about 400 pixels wide
-        setScale(600.0 / 4872.0);
+        setScale((600.0 / 4872.0) * 1.5);
     }
 
     ~RulerToolItem() override = default;
@@ -862,6 +882,7 @@ protected:
         if (isInRightHandle(pos))
         {
             // Right handle: ROTATE around left end (anchor point)
+            setCursor(Qt::ClosedHandCursor); // Show holding cursor
             beginRotate(event);
             event->accept();
             return;
@@ -908,6 +929,7 @@ protected:
         if (m_rotating)
         {
             m_rotating = false;
+            unsetCursor(); // Restore cursor after rotation
             // Show final angle
             qreal angle = std::fmod(rotation(), 360.0);
             if (angle < 0) angle += 360.0;
@@ -1293,6 +1315,12 @@ void Carta::wheelEvent(QWheelEvent *event)
         return;
     }
 
+    // Only allow zoom if Shift is held
+    if (!(event->modifiers() & Qt::ShiftModifier)) {
+        event->ignore();
+        return;
+    }
+
     QPointF delta = event->angleDelta();
     if (delta.isNull())
     {
@@ -1365,6 +1393,28 @@ void Carta::mousePressEvent(QMouseEvent *event)
                 return;
             }
             
+            // If this is the compass, forward the event to let it handle rotate/paint
+            if (CompassToolItem *compass = dynamic_cast<CompassToolItem*>(mapTool))
+            {
+                QPointF localPos = compass->mapFromScene(toolScenePos);
+                QGraphicsSceneMouseEvent sceneEvent(QEvent::GraphicsSceneMousePress);
+                sceneEvent.setPos(localPos);
+                sceneEvent.setScenePos(toolScenePos);
+                sceneEvent.setScreenPos(event->globalPosition().toPoint());
+                sceneEvent.setButton(event->button());
+                sceneEvent.setButtons(event->buttons());
+                sceneEvent.setModifiers(event->modifiers());
+
+                // Store reference for move/release events
+                m_draggedToolItem = compass;
+                m_activeCompass = compass;
+
+                // Forward to compass via public wrapper
+                compass->handleMousePress(&sceneEvent);
+                event->accept();
+                return;
+            }
+
             // Other tools use default dragging
             m_draggedToolItem = mapTool;
             m_toolDragOffset = toolScenePos - mapTool->pos();
@@ -1436,8 +1486,28 @@ void Carta::mouseMoveEvent(QMouseEvent *event)
         event->accept();
         return;
     }
+
+    // Forward to CompassToolItem if we have an active compass
+    if (m_activeCompass)
+    {
+        const QPointF toolScenePos = QPointF(event->pos());
+        QPointF localPos = m_activeCompass->mapFromScene(toolScenePos);
+
+        QGraphicsSceneMouseEvent sceneEvent(QEvent::GraphicsSceneMouseMove);
+        sceneEvent.setPos(localPos);
+        sceneEvent.setScenePos(toolScenePos);
+        sceneEvent.setScreenPos(event->globalPosition().toPoint());
+        sceneEvent.setButton(event->button());
+        sceneEvent.setButtons(event->buttons());
+        sceneEvent.setModifiers(event->modifiers());
+
+        m_activeCompass->handleMouseMove(&sceneEvent);
+        viewport()->update();
+        event->accept();
+        return;
+    }
     
-    // Forward to tool scene if we're dragging a tool (non-ruler)
+    // Forward to tool scene if we're dragging a tool (non-ruler/non-compass)
     if (m_draggedToolItem)
     {
         const QPointF toolScenePos = QPointF(event->pos());
@@ -1520,8 +1590,45 @@ void Carta::mouseReleaseEvent(QMouseEvent *event)
         event->accept();
         return;
     }
+
+    // Forward to CompassToolItem if we have an active compass
+    if (m_activeCompass)
+    {
+        const QPointF toolScenePos = QPointF(event->pos());
+        QPointF localPos = m_activeCompass->mapFromScene(toolScenePos);
+
+        QGraphicsSceneMouseEvent sceneEvent(QEvent::GraphicsSceneMouseRelease);
+        sceneEvent.setPos(localPos);
+        sceneEvent.setScenePos(toolScenePos);
+        sceneEvent.setScreenPos(event->globalPosition().toPoint());
+        sceneEvent.setButton(event->button());
+        sceneEvent.setButtons(event->buttons());
+        sceneEvent.setModifiers(event->modifiers());
+
+        m_activeCompass->handleMouseRelease(&sceneEvent);
+
+        // Store final position
+        storeToolViewportPos(m_activeCompass);
+
+        // Use bounding rect center for checking if it's over the toolbox
+        const QRectF toolBounds = m_activeCompass->compassBoundingRect();
+        const QPoint centerPoint = QPoint(
+            static_cast<int>(m_activeCompass->pos().x() + toolBounds.width() * m_activeCompass->scale() / 2),
+            static_cast<int>(m_activeCompass->pos().y() + toolBounds.height() * m_activeCompass->scale() / 2));
+
+        if (overlayContainsViewportPoint(centerPoint))
+        {
+            removeTool(m_activeCompass->toolId());
+        }
+
+        m_activeCompass = nullptr;
+        m_draggedToolItem = nullptr;
+        viewport()->update();
+        event->accept();
+        return;
+    }
     
-    // Forward to tool scene if we were dragging a tool (non-ruler)
+    // Forward to tool scene if we were dragging a tool (non-ruler/non-compass)
     if (m_draggedToolItem)
     {
         // Store final position and check if returned to toolbox
