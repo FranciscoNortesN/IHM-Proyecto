@@ -673,27 +673,20 @@ MapOverlayPanel::Mode MapOverlayPanel::idToMode(int id)
 void MapOverlayPanel::updateColorButtonStyle()
 {
     if (!m_colorButton)
-    {
         return;
-    }
 
-    // Try to render a palette SVG and tint it with the selected color. If the SVG resource
-    // is not available, fall back to using background-color in the stylesheet.
+    // Render the palette SVG and tint it with the selected color for the icon only.
     const int iconSize = m_colorButton->iconSize().width();
     const QPixmap base = renderSvgPixmap(QStringLiteral(":/assets/icons/palette.svg"), iconSize);
     const QPixmap colored = base.isNull() ? QPixmap() : colorizePixmap(base, m_currentColor);
 
-    if (!colored.isNull())
-    {
+    if (!colored.isNull()) {
         m_colorButton->setIcon(QIcon(colored));
-        m_colorButton->setStyleSheet(QStringLiteral("border: 2px solid rgba(255,255,255,0.6); background: transparent;"));
+    } else {
+        m_colorButton->setIcon(QIcon(QStringLiteral(":/assets/icons/palette.svg")));
     }
-    else
-    {
-        const QString colorStyle = QStringLiteral("background-color: %1; border: 2px solid rgba(255,255,255,0.6);")
-                                       .arg(m_currentColor.name(QColor::HexArgb));
-        m_colorButton->setStyleSheet(colorStyle);
-    }
+    // Remove any custom stylesheet so it uses the default button style
+    m_colorButton->setStyleSheet("");
 }
 
 QPoint MapOverlayPanel::mouseGlobalPos(const QMouseEvent *event)

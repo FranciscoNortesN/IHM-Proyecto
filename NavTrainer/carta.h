@@ -133,6 +133,7 @@ private:
     bool m_toolDragInProgress = false;
     MapToolItem *m_draggedToolItem = nullptr;
     RulerToolItem *m_activeRuler = nullptr;
+    CompassToolItem *m_activeCompass = nullptr;
     QPointF m_toolDragOffset;
     bool m_repositioningInForeground = false;
 
