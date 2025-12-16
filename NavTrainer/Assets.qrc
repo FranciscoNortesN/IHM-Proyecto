@@ -28,5 +28,6 @@
         <file>help/estadisticas.md</file>
         <file>data/navdb.sqlite</file>
         <file>icons/pencil.svg</file>
+        <file>icons/log-out.svg</file>
     </qresource>
 </RCC>
