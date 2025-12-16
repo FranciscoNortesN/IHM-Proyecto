@@ -59,6 +59,9 @@
        </property>
        <item row="4" column="0">
         <widget class="QPushButton" name="stats_button">
+         <property name="toolTip">
+          <string>Estadísticas</string>
+         </property>
          <property name="styleSheet">
           <string notr="true">border: none;
 padding:8px;</string>
@@ -80,6 +83,9 @@ padding:8px;</string>
        </item>
        <item row="5" column="0">
         <widget class="QPushButton" name="help_button">
+         <property name="toolTip">
+          <string>Ayuda</string>
+         </property>
          <property name="styleSheet">
           <string notr="true">border: none;
 padding:10px;</string>
@@ -101,6 +107,9 @@ padding:10px;</string>
        </item>
        <item row="3" column="0">
         <widget class="QPushButton" name="problem_button">
+         <property name="toolTip">
+          <string>Problemas</string>
+         </property>
          <property name="styleSheet">
           <string notr="true">border: none;
 padding:8px;</string>
@@ -142,6 +151,9 @@ padding:8px;</string>
        </item>
        <item row="0" column="0">
         <widget class="QPushButton" name="user_button">
+         <property name="toolTip">
+          <string>Perfil de usuario</string>
+         </property>
          <property name="styleSheet">
           <string notr="true">border: none;</string>
          </property>
@@ -162,6 +174,9 @@ padding:8px;</string>
        </item>
        <item row="7" column="0">
         <widget class="QPushButton" name="pushButton">
+         <property name="toolTip">
+          <string>Cerrar sesión</string>
+         </property>
          <property name="styleSheet">
           <string notr="true">border: none;
 padding:8px;</string>
