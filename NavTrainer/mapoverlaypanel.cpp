@@ -297,7 +297,7 @@ void MapOverlayPanel::buildActionGrid()
     m_settingsButton = makeActionButton(QStringLiteral("actionSettings"),
                                         QIcon(QStringLiteral(":/assets/icons/settings.svg")), tr("Ajustes"));
     m_colorButton = makeActionButton(QStringLiteral("actionColor"),
-                                     QIcon(QStringLiteral(":/assets/icons/color.svg")), tr("Color actual"));
+                                     QIcon(QStringLiteral(":/assets/icons/palette.svg")), tr("Color actual"));
     m_clearButton = makeActionButton(QStringLiteral("actionClear"),
                                      QIcon(QStringLiteral(":/assets/icons/trash.svg")), tr("Eliminar ediciones (Supr)"));
 
@@ -677,9 +677,23 @@ void MapOverlayPanel::updateColorButtonStyle()
         return;
     }
 
-    const QString colorStyle = QStringLiteral("background-color: %1; border: 2px solid rgba(255,255,255,0.6);")
-                                   .arg(m_currentColor.name(QColor::HexArgb));
-    m_colorButton->setStyleSheet(colorStyle);
+    // Try to render a palette SVG and tint it with the selected color. If the SVG resource
+    // is not available, fall back to using background-color in the stylesheet.
+    const int iconSize = m_colorButton->iconSize().width();
+    const QPixmap base = renderSvgPixmap(QStringLiteral(":/assets/icons/palette.svg"), iconSize);
+    const QPixmap colored = base.isNull() ? QPixmap() : colorizePixmap(base, m_currentColor);
+
+    if (!colored.isNull())
+    {
+        m_colorButton->setIcon(QIcon(colored));
+        m_colorButton->setStyleSheet(QStringLiteral("border: 2px solid rgba(255,255,255,0.6); background: transparent;"));
+    }
+    else
+    {
+        const QString colorStyle = QStringLiteral("background-color: %1; border: 2px solid rgba(255,255,255,0.6);")
+                                       .arg(m_currentColor.name(QColor::HexArgb));
+        m_colorButton->setStyleSheet(colorStyle);
+    }
 }
 
 QPoint MapOverlayPanel::mouseGlobalPos(const QMouseEvent *event)

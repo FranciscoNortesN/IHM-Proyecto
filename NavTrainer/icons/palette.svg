@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <!-- Simple palette placeholder: central blob with holes for colors -->
+  <path d="M32 6C20 6 10 14 10 26c0 10 7 18 16 20 1 0 2 1 2 2 0 2-1 4-3 6-2 2-4 3-9 3l-1 1c5 2 11 3 16 3 12 0 22-8 22-20S44 6 32 6z" fill="#000000"/>
+  <circle cx="22" cy="24" r="3" fill="#ffffff"/>
+  <circle cx="30" cy="18" r="3" fill="#ffffff"/>
+  <circle cx="40" cy="20" r="3" fill="#ffffff"/>
+  <circle cx="44" cy="30" r="3" fill="#ffffff"/>
+</svg>
