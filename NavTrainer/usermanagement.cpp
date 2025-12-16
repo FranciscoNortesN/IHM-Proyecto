@@ -1,5 +1,6 @@
 #include "usermanagement.h"
 #include "ui_usermanagement.h"
+#include "imageutils.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPainter>
@@ -52,34 +53,7 @@ void UserManagement::cargarDatosUsuario()
             
             if (!m_avatarImage.isNull()) {
                 int targetSize = qMin(ui->lblAvatarPerfil->width(), ui->lblAvatarPerfil->height());
-                
-                // Recortar a cuadrado
-                QPixmap originalPixmap = QPixmap::fromImage(m_avatarImage);
-                int minSize = qMin(originalPixmap.width(), originalPixmap.height());
-                int x = (originalPixmap.width() - minSize) / 2;
-                int y = (originalPixmap.height() - minSize) / 2;
-                QPixmap squarePixmap = originalPixmap.copy(x, y, minSize, minSize);
-                
-                // Crear máscara circular para mostrar
-                QPixmap scaledPixmap = squarePixmap.scaled(
-                    targetSize, targetSize,
-                    Qt::KeepAspectRatio,
-                    Qt::SmoothTransformation
-                );
-                
-                QPixmap roundedPixmap(targetSize, targetSize);
-                roundedPixmap.fill(Qt::transparent);
-                
-                QPainter painter(&roundedPixmap);
-                painter.setRenderHint(QPainter::Antialiasing);
-                painter.setRenderHint(QPainter::SmoothPixmapTransform);
-                
-                QPainterPath path;
-                path.addEllipse(0, 0, targetSize, targetSize);
-                painter.setClipPath(path);
-                painter.drawPixmap(0, 0, scaledPixmap);
-                painter.end();
-                
+                QPixmap roundedPixmap = ImageUtils::makeCircularFromImage(m_avatarImage, targetSize);
                 ui->lblAvatarPerfil->setPixmap(roundedPixmap);
                 ui->lblAvatarPerfil->setText("");
             }
@@ -111,31 +85,7 @@ void UserManagement::onCambiarAvatar()
             
             // Mostrar preview
             int targetSize = qMin(ui->lblAvatarPerfil->width(), ui->lblAvatarPerfil->height());
-            QPixmap originalPixmap = QPixmap::fromImage(m_avatarImage);
-            int minSize = qMin(originalPixmap.width(), originalPixmap.height());
-            int x = (originalPixmap.width() - minSize) / 2;
-            int y = (originalPixmap.height() - minSize) / 2;
-            QPixmap squarePixmap = originalPixmap.copy(x, y, minSize, minSize);
-            
-            QPixmap scaledPixmap = squarePixmap.scaled(
-                targetSize, targetSize,
-                Qt::KeepAspectRatio,
-                Qt::SmoothTransformation
-            );
-            
-            QPixmap roundedPixmap(targetSize, targetSize);
-            roundedPixmap.fill(Qt::transparent);
-            
-            QPainter painter(&roundedPixmap);
-            painter.setRenderHint(QPainter::Antialiasing);
-            painter.setRenderHint(QPainter::SmoothPixmapTransform);
-            
-            QPainterPath path;
-            path.addEllipse(0, 0, targetSize, targetSize);
-            painter.setClipPath(path);
-            painter.drawPixmap(0, 0, scaledPixmap);
-            painter.end();
-            
+            QPixmap roundedPixmap = ImageUtils::makeCircularFromImage(m_avatarImage, targetSize);
             ui->lblAvatarPerfil->setPixmap(roundedPixmap);
             ui->lblAvatarPerfil->setText("");
             

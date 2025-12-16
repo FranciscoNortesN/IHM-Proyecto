@@ -10,6 +10,7 @@
 #include "user.h"
 #include "login.h"
 #include "usermanagement.h"
+#include "toastnotification.h"
 #include "navlib/navigationdao.h"
 
 #include <QDebug>
@@ -35,11 +36,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupMapView();
     setupOverlayPanel();
+    
+    // Inicializar notificación toast
+    m_toastNotification = new ToastNotification(this);
 
     connect(ui->problem_button, &QPushButton::clicked, this, &MainWindow::onProblemButtonClicked);
     connect(ui->stats_button, &QPushButton::clicked, this, &MainWindow::onStatsButtonClicked);
     connect(ui->help_button, &QPushButton::clicked, this, &MainWindow::onHelpButtonClicked);
     connect(ui->user_button, &QPushButton::clicked, this, &MainWindow::onUserButtonClicked);
+    connect(ui->pushButton, &QPushButton::clicked, this, &MainWindow::onLogoutButtonClicked);
 
     if (!loadMapResource(QStringLiteral(":/assets/carta_nautica.jpg"), tr("Estrecho de Gibraltar")))
     {
@@ -322,6 +327,7 @@ void MainWindow::onStatsButtonClicked()
     Stats *statsWindow = new Stats(m_dao, m_currentUserNickname, this);
     statsWindow->setAttribute(Qt::WA_DeleteOnClose);
     statsWindow->setWindowFlags(Qt::Window);
+    statsWindow->setWindowModality(Qt::WindowModal);
     statsWindow->show();
 }
 
@@ -331,6 +337,46 @@ void MainWindow::onHelpButtonClicked()
     helpWindow->setAttribute(Qt::WA_DeleteOnClose);
     helpWindow->setWindowFlags(Qt::Window);
     helpWindow->show();
+}
+
+void MainWindow::onLogoutButtonClicked()
+{
+    // Si no hay usuario logueado, no hacer nada
+    if (m_currentUserNickname.isEmpty()) {
+        return;
+    }
+    
+    // Confirmar logout
+    int respuesta = QMessageBox::question(
+        this,
+        tr("Cerrar sesión"),
+        tr("¿Está seguro de que desea cerrar sesión?"),
+        QMessageBox::Yes | QMessageBox::No
+    );
+    
+    if (respuesta == QMessageBox::Yes) {
+        // Limpiar usuario actual
+        m_currentUserNickname.clear();
+        
+        // Restablecer icono del botón a default
+        ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
+        
+        // Cerrar ventana de gestión de usuario si está abierta
+        if (m_userManagement) {
+            m_userManagement->close();
+            m_userManagement = nullptr;
+        }
+        
+        // Mostrar notificación toast
+        showToast(tr("Sesión cerrada correctamente"), ToastNotification::Success);
+    }
+}
+
+void MainWindow::showToast(const QString &message, int type, int durationMs)
+{
+    if (m_toastNotification) {
+        m_toastNotification->showMessage(message, static_cast<ToastNotification::NotificationType>(type), durationMs);
+    }
 }
 
 void MainWindow::onUserButtonClicked()
@@ -378,13 +424,14 @@ void MainWindow::onUserButtonClicked()
     }
     
     // Crear los widgets de login y registro
-    m_loginWidget = new LoginWidget(m_dao, nullptr);
-    m_registerWidget = new RegisterWidget(m_dao, nullptr);
+    m_loginWidget = new LoginWidget(m_dao, this);
+    m_registerWidget = new RegisterWidget(m_dao, this);
     
     // Conectar señal de inicio de sesión exitoso
     connect(m_loginWidget, &LoginWidget::sesionIniciada, this, [this](const QString &nickName) {
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
+        showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
     });
     
     // Conectar señales para cambiar entre pantallas
@@ -393,6 +440,7 @@ void MainWindow::onUserButtonClicked()
         m_registerWidget->show();
         m_registerWidget->raise();
         m_registerWidget->activateWindow();
+        QApplication::setActiveWindow(m_registerWidget);
     });
     
     connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
@@ -415,6 +463,10 @@ void MainWindow::onUserButtonClicked()
     m_loginWidget->setAttribute(Qt::WA_DeleteOnClose);
     m_loginWidget->setWindowFlags(Qt::Window);
     m_loginWidget->show();
+    
+    // Configurar también el registro
+    m_registerWidget->setAttribute(Qt::WA_DeleteOnClose);
+    m_registerWidget->setWindowFlags(Qt::Window);
 }
 
 void MainWindow::updateUserAvatar(const QString &nickName)

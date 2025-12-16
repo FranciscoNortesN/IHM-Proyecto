@@ -55,12 +55,6 @@ void LoginWidget::onIniciarSesion()
             if (usuarioAuth.password() == contrasena) {
                 usuarioEncontrado = true;
                 
-                QMessageBox::information(
-                    this,
-                    tr("Éxito"),
-                    tr("¡Bienvenido %1!").arg(usuario)
-                );
-                
                 emit sesionIniciada(usuario);
                 
                 // Limpiar campos

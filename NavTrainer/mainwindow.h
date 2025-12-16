@@ -10,6 +10,7 @@ class NavigationDAO;
 class LoginWidget;
 class RegisterWidget;
 class UserManagement;
+class ToastNotification;
 
 class Carta;
 class SelecPro;
@@ -40,6 +41,7 @@ private:
     LoginWidget *m_loginWidget = nullptr;
     RegisterWidget *m_registerWidget = nullptr;
     UserManagement *m_userManagement = nullptr;
+    ToastNotification *m_toastNotification = nullptr;
     QString m_currentUserNickname;
 
     void setupMapView();
@@ -52,11 +54,13 @@ private:
     void handleOverlayDrag(const QPoint &delta);
     void setupShortcuts();
     void updateUserAvatar(const QString &nickName);
+    void showToast(const QString &message, int type = 0, int durationMs = 5000);
 
 private slots:
     void onProblemButtonClicked();
     void onStatsButtonClicked();
     void onHelpButtonClicked();
     void onUserButtonClicked();
+    void onLogoutButtonClicked();
 };
 #endif // MAINWINDOW_H

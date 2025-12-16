@@ -29,5 +29,6 @@
         <file>data/navdb.sqlite</file>
         <file>icons/pencil.svg</file>
         <file>icons/log-out.svg</file>
+        <file>icons/avatar-default-squared.svg</file>
     </qresource>
 </RCC>

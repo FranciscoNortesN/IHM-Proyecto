@@ -11,6 +11,7 @@ CONFIG += c++17
 SOURCES += \
     carta.cpp \
     help.cpp \
+    imageutils.cpp \
     login.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -18,6 +19,7 @@ SOURCES += \
     problem.cpp \
     selecpro.cpp \
     stats.cpp \
+    toastnotification.cpp \
     usermanagement.cpp \
     navlib/navigation.cpp \
     navlib/navigationdao.cpp \
@@ -26,6 +28,7 @@ SOURCES += \
 HEADERS += \
     carta.h \
     help.h \
+    imageutils.h \
     login.h \
     mainwindow.h \
     mapoverlaypanel.h \
@@ -33,6 +36,7 @@ HEADERS += \
     problem.h \
     selecpro.h \
     stats.h \
+    toastnotification.h \
     usermanagement.h \
     navlib/navigation.h \
     navlib/navigationdao.h \
