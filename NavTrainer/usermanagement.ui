@@ -519,7 +519,7 @@
     <property name="sizeHint" stdset="0">
     <size>
      <width>20</width>
-     <height>10</height>
+     <height>35</height>
     </size>
     </property>
    </spacer>
@@ -536,7 +536,7 @@
       <string notr="true">background-color: #ff4444; color: white;</string>
      </property>
      <property name="text">
-      <string>Desloguearse</string>
+      <string>Cerrar sesión</string>
      </property>
     </widget>
    </item>

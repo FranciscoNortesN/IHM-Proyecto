@@ -8,7 +8,7 @@
 #include <QRegularExpression>
 
 UserManagement::UserManagement(NavigationDAO *dao, const QString &nickName, QWidget *parent)
-    : QWidget(parent)
+    : QDialog(parent)
     , ui(new Ui::UserManagement)
     , m_dao(dao)
     , m_nickName(nickName)

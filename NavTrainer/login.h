@@ -1,7 +1,7 @@
 #ifndef LOGIN_H
 #define LOGIN_H
 
-#include <QWidget>
+#include <QDialog>
 #include <QString>
 #include <QImage>
 #include "navlib/navigationdao.h"
@@ -11,7 +11,7 @@ namespace Ui {
 class Login;
 }
 
-class RegisterWidget : public QWidget
+class RegisterWidget : public QDialog
 {
     Q_OBJECT
 

@@ -1,7 +1,7 @@
 #ifndef USERMANAGEMENT_H
 #define USERMANAGEMENT_H
 
-#include <QWidget>
+#include <QDialog>
 #include <QString>
 #include <QImage>
 #include "navlib/navigationdao.h"
@@ -11,7 +11,7 @@ namespace Ui {
 class UserManagement;
 }
 
-class UserManagement : public QWidget
+class UserManagement : public QDialog
 {
     Q_OBJECT
 

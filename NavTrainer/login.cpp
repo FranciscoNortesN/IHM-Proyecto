@@ -14,7 +14,7 @@
 #include <QDialog>
 
 RegisterWidget::RegisterWidget(NavigationDAO *dao, QWidget *parent)
-    : QWidget(parent)
+    : QDialog(parent)
     , ui(new Ui::Login)
     , m_dao(dao)
 {

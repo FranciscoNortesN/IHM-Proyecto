@@ -385,9 +385,7 @@ void MainWindow::onUserButtonClicked()
     // Si ya hay usuario logueado, mostrar gestión de usuario
     if (!m_currentUserNickname.isEmpty()) {
         if (m_userManagement) {
-            m_userManagement->show();
-            m_userManagement->raise();
-            m_userManagement->activateWindow();
+            m_userManagement->exec();
             return;
         }
         
@@ -415,21 +413,18 @@ void MainWindow::onUserButtonClicked()
             showToast(tr("Nombre actualizado a %1").arg(nuevo), ToastNotification::Success);
         });
         
-        connect(m_userManagement, &QWidget::destroyed, this, [this]() {
+        connect(m_userManagement, &QDialog::finished, this, [this]() {
             m_userManagement = nullptr;
         });
         
         m_userManagement->setAttribute(Qt::WA_DeleteOnClose);
-        m_userManagement->setWindowFlags(Qt::Window);
-        m_userManagement->show();
+        m_userManagement->exec();
         return;
     }
     
-    // Si los widgets ya existen, solo mostrar el login
+    // Si los widgets ya existen, solo mostrar el login como modal
     if (m_loginWidget) {
-        m_loginWidget->show();
-        m_loginWidget->raise();
-        m_loginWidget->activateWindow();
+        m_loginWidget->exec();
         return;
     }
     
@@ -442,6 +437,7 @@ void MainWindow::onUserButtonClicked()
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
+        m_loginWidget->accept();
     });
 
     // Mostrar mensajes no bloqueantes desde los formularios
@@ -451,27 +447,23 @@ void MainWindow::onUserButtonClicked()
     
     // Conectar señales para cambiar entre pantallas
     connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
-        m_loginWidget->hide();
-        m_registerWidget->show();
-        m_registerWidget->raise();
-        m_registerWidget->activateWindow();
+        m_loginWidget->reject();
+        int result = m_registerWidget->exec();
+        if (result == QDialog::Rejected) {
+            m_loginWidget->exec();
+        }
     });
     
     connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
-        m_registerWidget->hide();
-        m_loginWidget->show();
-        m_loginWidget->raise();
-        m_loginWidget->activateWindow();
+        m_registerWidget->reject();
+        m_loginWidget->exec();
     });
 
     connect(m_registerWidget, &RegisterWidget::cuentaCreada, this, [this](const QString &nickName) {
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
-        if (m_loginWidget) {
-            m_loginWidget->close();
-            m_loginWidget = nullptr;
-        }
+        m_registerWidget->accept();
     });
 
     connect(m_registerWidget, &RegisterWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo) {
@@ -479,22 +471,20 @@ void MainWindow::onUserButtonClicked()
     });
     
     // Limpiar cuando se cierren las ventanas
-    connect(m_loginWidget, &QWidget::destroyed, this, [this]() {
+    connect(m_loginWidget, &QDialog::finished, this, [this]() {
         m_loginWidget = nullptr;
     });
     
-    connect(m_registerWidget, &QWidget::destroyed, this, [this]() {
+    connect(m_registerWidget, &QDialog::finished, this, [this]() {
         m_registerWidget = nullptr;
     });
     
-    // Mostrar el login inicialmente
+    // Mostrar el login inicialmente como modal
     m_loginWidget->setAttribute(Qt::WA_DeleteOnClose);
-    m_loginWidget->setWindowFlags(Qt::Window);
-    m_loginWidget->show();
+    m_loginWidget->exec();
     
     // Configurar también el registro
     m_registerWidget->setAttribute(Qt::WA_DeleteOnClose);
-    m_registerWidget->setWindowFlags(Qt::Window);
 }
 
 void MainWindow::updateUserAvatar(const QString &nickName)

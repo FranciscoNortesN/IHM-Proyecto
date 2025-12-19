@@ -4,7 +4,7 @@
 #include "toastnotification.h"
 
 LoginWidget::LoginWidget(NavigationDAO *dao, QWidget *parent)
-    : QWidget(parent)
+    : QDialog(parent)
     , ui(new Ui::User)
     , m_dao(dao)
 {
