@@ -2,6 +2,7 @@
 #include "ui_selecpro.h"
 #include "navlib/navdaoexception.h"
 #include "problem.h"
+#include "mainwindow.h"
 #include <QMessageBox>
 #include <QListWidgetItem>
 #include <QRandomGenerator>
@@ -31,6 +32,9 @@ SelecPro::SelecPro(NavigationDAO *dao, const QString &userNickname, QWidget *par
         "    background-color: #f9f9f9;"
         "    font-size: 14px;"
         "    color: #000000;"
+        "}"
+        "QListWidget::item:nth-child(even) {"
+        "    background-color: #e6e6e6;"
         "}"
         "QListWidget::item:hover {"
         "    border-color: #0078d4;"
@@ -125,6 +129,11 @@ void SelecPro::createSampleProblems()
     }
 }
 
+void SelecPro::setMainWindow(MainWindow *mainWindow)
+{
+    m_mainWindow = mainWindow;
+}
+
 void SelecPro::onRandomButtonClicked()
 {
     if (m_problems.isEmpty()) {
@@ -137,11 +146,19 @@ void SelecPro::onRandomButtonClicked()
     
     // Abrir directamente la ventana del problema aleatorio
     const Problem &selectedProblem = m_problems[randomIndex];
-    ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, this);
+    ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, nullptr);
     problemWindow->setAttribute(Qt::WA_DeleteOnClose);
     problemWindow->setWindowFlags(Qt::Window);
     problemWindow->setWindowTitle(tr("Ejercicio %1 (Aleatorio)").arg(randomIndex + 1));
+    
+    // Establecer referencia a MainWindow
+    if (m_mainWindow) {
+        problemWindow->setMainWindow(m_mainWindow);
+    }
+    
     problemWindow->show();
+    
+    this->close();
 }
 
 void SelecPro::onProblemSelected()
@@ -155,10 +172,18 @@ void SelecPro::onProblemSelected()
     if (problemIndex >= 0 && problemIndex < m_problems.size()) {
         const Problem &selectedProblem = m_problems[problemIndex];
         
-        ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, this);
+        ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, nullptr);
         problemWindow->setAttribute(Qt::WA_DeleteOnClose);
         problemWindow->setWindowFlags(Qt::Window);
         problemWindow->setWindowTitle(tr("Ejercicio %1").arg(problemIndex + 1));
+        
+        // Establecer referencia a MainWindow
+        if (m_mainWindow) {
+            problemWindow->setMainWindow(m_mainWindow);
+        }
+        
         problemWindow->show();
+        
+        this->close();
     }
 }

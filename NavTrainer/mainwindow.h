@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QPoint>
 #include <QString>
+#include <QList>
+#include <QPushButton>
 
 class MapOverlayPanel;
 class NavigationDAO;
@@ -11,6 +13,7 @@ class LoginWidget;
 class RegisterWidget;
 class UserManagement;
 class ToastNotification;
+class ProblemWidget;
 
 class Carta;
 class SelecPro;
@@ -30,6 +33,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    
+    void addMinimizedProblem(ProblemWidget *problem);
+    void removeMinimizedProblem(ProblemWidget *problem);
 
 private:
     Ui::MainWindow *ui;
@@ -43,6 +49,9 @@ private:
     UserManagement *m_userManagement = nullptr;
     ToastNotification *m_toastNotification = nullptr;
     QString m_currentUserNickname;
+    
+    QList<ProblemWidget*> m_minimizedProblems;
+    QList<QPushButton*> m_minimizedButtons;
 
     void setupMapView();
     void setupOverlayPanel();
@@ -55,6 +64,10 @@ private:
     void setupShortcuts();
     void updateUserAvatar(const QString &nickName);
     void showToast(const QString &message, int type = 0, int durationMs = 5000);
+    void updateMinimizedButtonsPosition();
+    
+protected:
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     void onProblemButtonClicked();

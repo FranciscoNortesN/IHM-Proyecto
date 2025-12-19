@@ -424,7 +424,7 @@ QString NavigationDAO::boolToDb(bool v) const
 
 bool NavigationDAO::boolFromDb(const QString &s) const
 {
-    return (s == QLatin1String("1") || s.toInt() == 1);
+    return (s == QLatin1String("1") || s.toInt() == 1 || s.toLower() == QLatin1String("true"));
 }
 
 [[noreturn]] void NavigationDAO::throwSqlError(const QString &where, const QSqlError &err) const

@@ -110,10 +110,7 @@ protected:
         if (event->button() == Qt::LeftButton && m_view)
         {
             m_view->handleToolDragStarted();
-        }
-        // If this is the protractor and we are about to rotate, change cursor
-        if (m_toolId == QLatin1String("tool_ruler")) {
-            setCursor(Qt::SizeAllCursor); // or another cursor indicating rotation
+            m_view->setCursor(Qt::ClosedHandCursor);
         }
         QGraphicsSvgItem::mousePressEvent(event);
     }
@@ -121,11 +118,9 @@ protected:
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
     {
         QGraphicsSvgItem::mouseReleaseEvent(event);
-        if (m_toolId == QLatin1String("tool_ruler")) {
-            unsetCursor();
-        }
         if (m_view)
         {
+            m_view->unsetCursor();
             m_view->handleToolDragFinished(this);
         }
     }
@@ -145,6 +140,11 @@ protected:
             return;
         }
 
+        // Change cursor on the view
+        if (m_view) {
+            m_view->setCursor(Qt::SizeAllCursor);
+        }
+
         // Invert the rotation direction for more intuitive control
         const qreal degrees = -static_cast<qreal>(deltaValue) / 8.0;
         m_rotationDeg = std::fmod(m_rotationDeg + degrees, 360.0);
@@ -160,6 +160,13 @@ protected:
         if (scene())
         {
             scene()->update();
+        }
+        
+        // Reset cursor after a short delay
+        if (m_view) {
+            QTimer::singleShot(150, m_view, [this]() {
+                if (m_view) m_view->unsetCursor();
+            });
         }
         
         event->accept();
@@ -420,6 +427,11 @@ protected:
             return;
         }
 
+        // Change cursor on the view
+        if (m_view) {
+            m_view->setCursor(Qt::SizeAllCursor);
+        }
+
         // Adjust the spread between legs
         const qreal step = static_cast<qreal>(deltaValue) / 120.0 * 3.0;
         qreal currentSpread = m_pivotRotationDeg - m_pencilRotationDeg;
@@ -428,6 +440,14 @@ protected:
         
         update();
         if (scene()) scene()->update();
+        
+        // Reset cursor after a short delay
+        if (m_view) {
+            QTimer::singleShot(150, m_view, [this]() {
+                if (m_view) m_view->unsetCursor();
+            });
+        }
+        
         event->accept();
     }
 
@@ -1045,13 +1065,18 @@ protected:
         if (m_draggingMove)
         {
             m_draggingMove = false;
-            if (m_view) m_view->handleToolDragFinished(this);
+            if (m_view) {
+                m_view->unsetCursor();
+                m_view->handleToolDragFinished(this);
+            }
         }
 
         if (m_rotating)
         {
             m_rotating = false;
-            unsetCursor(); // Restore cursor after rotation
+            if (m_view) {
+                m_view->unsetCursor();
+            }
             // Show final angle
             qreal angle = std::fmod(rotation(), 360.0);
             if (angle < 0) angle += 360.0;
@@ -1081,7 +1106,10 @@ private:
     {
         if (!event) return;
         m_draggingMove = true;
-        if (m_view) m_view->handleToolDragStarted();
+        if (m_view) {
+            m_view->handleToolDragStarted();
+            m_view->setCursor(Qt::ClosedHandCursor);
+        }
         m_moveSceneOffset = event->scenePos() - pos();
     }
 
@@ -1095,6 +1123,9 @@ private:
     {
         if (!event) return;
         m_rotating = true;
+        if (m_view) {
+            m_view->setCursor(Qt::ClosedHandCursor);
+        }
         
         // Store the left end position in scene coords BEFORE rotation
         m_rotateAnchorScene = mapToScene(leftEndCenter());
@@ -1635,6 +1666,7 @@ void Carta::mouseMoveEvent(QMouseEvent *event)
         const QPointF toolScenePos = QPointF(event->pos());
         // Move the tool directly
         m_draggedToolItem->setPos(toolScenePos - m_toolDragOffset);
+        setCursor(Qt::ClosedHandCursor);
         viewport()->update();
         event->accept();
         return;

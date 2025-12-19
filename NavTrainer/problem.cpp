@@ -2,8 +2,10 @@
 #include "ui_problem.h"
 #include "navigationdao.h"
 #include "navdaoexception.h"
+#include "mainwindow.h"
 #include <QMessageBox>
 #include <QRadioButton>
+#include <QEvent>
 
 ProblemWidget::ProblemWidget(const Problem &problem, NavigationDAO *dao, const QString &userNickname, QWidget *parent) :
     QWidget(parent),
@@ -105,4 +107,19 @@ void ProblemWidget::recordResult(bool isCorrect)
     } catch (const NavDAOException &e) {
         qWarning() << "Error al registrar estadísticas:" << e.what();
     }
+}
+
+void ProblemWidget::setMainWindow(MainWindow *mainWindow)
+{
+    m_mainWindow = mainWindow;
+}
+
+void ProblemWidget::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::WindowStateChange) {
+        if (isMinimized() && m_mainWindow) {
+            m_mainWindow->addMinimizedProblem(this);
+        }
+    }
+    QWidget::changeEvent(event);
 }

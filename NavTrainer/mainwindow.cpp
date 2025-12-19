@@ -24,6 +24,7 @@
 #include <QVBoxLayout>
 #include <QPainter>
 #include <QPainterPath>
+#include <QResizeEvent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -320,6 +321,7 @@ void MainWindow::onProblemButtonClicked()
     SelecPro *selecProWindow = new SelecPro(m_dao, m_currentUserNickname, this);
     selecProWindow->setAttribute(Qt::WA_DeleteOnClose);
     selecProWindow->setWindowFlags(Qt::Window);
+    selecProWindow->setMainWindow(this);
     selecProWindow->show();
 }
 
@@ -527,4 +529,74 @@ void MainWindow::updateUserAvatar(const QString &nickName)
     } catch (const NavDAOException &e) {
         qWarning() << "Error al cargar avatar:" << e.what();
     }
+}
+
+void MainWindow::addMinimizedProblem(ProblemWidget *problem)
+{
+    if (m_minimizedProblems.contains(problem)) {
+        return;
+    }
+    
+    m_minimizedProblems.append(problem);
+    
+    QPushButton *button = new QPushButton(this);
+    button->setIcon(QIcon(":/assets/icons/problemas.svg"));
+    button->setIconSize(QSize(40, 40));
+    button->setFixedSize(50, 50);
+    button->setStyleSheet(
+        "QPushButton {"
+        "    border-radius: 25px;"
+        "    background-color: #0078d4;"
+        "    border: 2px solid #005a9e;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #106ebe;"
+        "}"
+    );
+    
+    connect(button, &QPushButton::clicked, [this, problem]() {
+        problem->setWindowState(Qt::WindowActive);
+        problem->show();
+        problem->raise();
+        problem->activateWindow();
+        removeMinimizedProblem(problem);
+    });
+    
+    m_minimizedButtons.append(button);
+    updateMinimizedButtonsPosition();
+    button->show();
+}
+
+void MainWindow::removeMinimizedProblem(ProblemWidget *problem)
+{
+    int index = m_minimizedProblems.indexOf(problem);
+    if (index == -1) {
+        return;
+    }
+    
+    m_minimizedProblems.removeAt(index);
+    QPushButton *button = m_minimizedButtons.takeAt(index);
+    button->deleteLater();
+    
+    updateMinimizedButtonsPosition();
+}
+
+void MainWindow::updateMinimizedButtonsPosition()
+{
+    int buttonSize = 50;
+    int margin = 10;
+    int spacing = 5;
+    
+    for (int i = 0; i < m_minimizedButtons.size(); ++i) {
+        QPushButton *button = m_minimizedButtons[i];
+        int x = width() - margin - buttonSize;
+        int y = height() - margin - buttonSize - (i * (buttonSize + spacing));
+        button->move(x, y);
+    }
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    updateMinimizedButtonsPosition();
 }
