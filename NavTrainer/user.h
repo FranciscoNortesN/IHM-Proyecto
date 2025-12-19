@@ -30,6 +30,7 @@ private:
 signals:
     void sesionIniciada(const QString &nickName);
     void irACrearCuenta();
+    void mostrarMensaje(const QString &mensaje, int tipo);
 };
 
 #endif // USER_H

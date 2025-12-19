@@ -404,6 +404,15 @@ void MainWindow::onUserButtonClicked()
             ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
             m_userManagement = nullptr;
         });
+
+        connect(m_userManagement, &UserManagement::nickNameActualizado, this,
+                [this](const QString &anterior, const QString &nuevo) {
+            if (m_currentUserNickname == anterior) {
+                m_currentUserNickname = nuevo;
+            }
+            updateUserAvatar(nuevo);
+            showToast(tr("Nombre actualizado a %1").arg(nuevo), ToastNotification::Success);
+        });
         
         connect(m_userManagement, &QWidget::destroyed, this, [this]() {
             m_userManagement = nullptr;
@@ -433,6 +442,11 @@ void MainWindow::onUserButtonClicked()
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
     });
+
+    // Mostrar mensajes no bloqueantes desde los formularios
+    connect(m_loginWidget, &LoginWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo) {
+        showToast(mensaje, tipo);
+    });
     
     // Conectar señales para cambiar entre pantallas
     connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
@@ -440,7 +454,6 @@ void MainWindow::onUserButtonClicked()
         m_registerWidget->show();
         m_registerWidget->raise();
         m_registerWidget->activateWindow();
-        QApplication::setActiveWindow(m_registerWidget);
     });
     
     connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
@@ -448,6 +461,20 @@ void MainWindow::onUserButtonClicked()
         m_loginWidget->show();
         m_loginWidget->raise();
         m_loginWidget->activateWindow();
+    });
+
+    connect(m_registerWidget, &RegisterWidget::cuentaCreada, this, [this](const QString &nickName) {
+        m_currentUserNickname = nickName;
+        updateUserAvatar(nickName);
+        showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
+        if (m_loginWidget) {
+            m_loginWidget->close();
+            m_loginWidget = nullptr;
+        }
+    });
+
+    connect(m_registerWidget, &RegisterWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo) {
+        showToast(mensaje, tipo);
     });
     
     // Limpiar cuando se cierren las ventanas

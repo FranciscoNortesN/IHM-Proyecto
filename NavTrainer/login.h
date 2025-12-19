@@ -37,6 +37,7 @@ private:
 signals:
     void cuentaCreada(const QString &nickName);
     void irAIniciarSesion();
+    void mostrarMensaje(const QString &mensaje, int tipo);
 };
 
 #endif // LOGIN_H

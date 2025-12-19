@@ -1,7 +1,7 @@
 #include "login.h"
 #include "ui_login.h"
+#include "toastnotification.h"
 #include <QFileDialog>
-#include <QMessageBox>
 #include <QRegularExpression>
 #include <QDate>
 #include <QPainter>
@@ -89,17 +89,14 @@ void RegisterWidget::onCrearCuenta()
     QString contrasena = ui->txtContrasena->text();
     
     if (!m_dao) {
-        QMessageBox::critical(this, tr("Error"), tr("No hay conexión a la base de datos."));
+        emit mostrarMensaje(tr("No hay conexión a la base de datos."), ToastNotification::Error);
         return;
     }
     
     // Verificar si el nickname ya existe
     if (nickNameExiste(nickName)) {
-        QMessageBox::warning(
-            this,
-            tr("Error"),
-            tr("El nombre de usuario '%1' ya existe. Por favor elija otro.").arg(nickName)
-        );
+        emit mostrarMensaje(tr("El nombre de usuario '%1' ya existe. Por favor elija otro.").arg(nickName),
+                            ToastNotification::Warning);
         ui->txtNickname->setFocus();
         return;
     }
@@ -110,18 +107,15 @@ void RegisterWidget::onCrearCuenta()
     try {
         ::User newUser(nickName, correo, contrasena, m_avatarImage, birthdate);
         m_dao->saveUser(newUser);
-        
-        QMessageBox::information(
-            this,
-            tr("Éxito"),
-            tr("Cuenta creada exitosamente para: %1").arg(nickName)
-        );
-        
+
         emit cuentaCreada(nickName);
         
         // Limpiar formulario
         ui->txtNickname->clear();
         ui->txtCorreo->clear();
+        ui->spnDia->setValue(1);
+        ui->spnMes->setValue(1);
+        ui->spnAno->setValue(2008);
         ui->txtContrasena->clear();
         ui->txtConfirmarContrasena->clear();
         m_avatarImage = QImage();
@@ -132,11 +126,7 @@ void RegisterWidget::onCrearCuenta()
         this->close();
         
     } catch (const NavDAOException &e) {
-        QMessageBox::critical(
-            this,
-            tr("Error de Base de Datos"),
-            tr("Error al crear la cuenta: %1").arg(e.what())
-        );
+        emit mostrarMensaje(tr("Error al crear la cuenta: %1").arg(e.what()), ToastNotification::Error);
     }
 }
 
@@ -149,69 +139,80 @@ bool RegisterWidget::validarFormulario()
 {
     QString nickName = ui->txtNickname->text().trimmed();
     QString correo = ui->txtCorreo->text().trimmed();
+    int dia = ui->spnDia->value();
+    int mes = ui->spnMes->value();
+    int ano = ui->spnAno->value();
     QString contrasena = ui->txtContrasena->text();
     QString confirmarContrasena = ui->txtConfirmarContrasena->text();
     
     // Validar nickname
     if (nickName.isEmpty()) {
-        QMessageBox::warning(this, tr("Error"), tr("Por favor ingrese un nombre de usuario."));
+        emit mostrarMensaje(tr("Por favor ingrese un nombre de usuario."), ToastNotification::Warning);
         ui->txtNickname->setFocus();
         return false;
     }
     
     // Validar correo vacío
     if (correo.isEmpty()) {
-        QMessageBox::warning(this, tr("Error"), tr("Por favor ingrese un correo electrónico."));
+        emit mostrarMensaje(tr("Por favor ingrese un correo electrónico."), ToastNotification::Warning);
         ui->txtCorreo->setFocus();
         return false;
     }
     
     // Validar formato de correo
     if (!validarCorreo(correo)) {
-        QMessageBox::warning(this, tr("Error"), tr("Por favor ingrese un correo electrónico válido."));
+        emit mostrarMensaje(tr("Por favor ingrese un correo electrónico válido."), ToastNotification::Warning);
         ui->txtCorreo->setFocus();
+        return false;
+    }
+
+    // Validar edad mínima
+    QDate fechaNacimiento(ano, mes, dia);
+    if (!fechaNacimiento.isValid()) {
+        emit mostrarMensaje(tr("Por favor ingrese una fecha de nacimiento válida."), ToastNotification::Warning);
+        ui->spnDia->setFocus();
+        return false;
+    }
+    
+    QDate hoy = QDate::currentDate();
+    int edad = hoy.year() - fechaNacimiento.year();
+    if (hoy.month() < fechaNacimiento.month() || 
+        (hoy.month() == fechaNacimiento.month() && hoy.day() < fechaNacimiento.day())) {
+        edad--;
+    }
+    
+    if (edad < 16) {
+        emit mostrarMensaje(tr("Debes tener al menos 16 años para crear una cuenta."), ToastNotification::Warning);
+        ui->spnAno->setFocus();
         return false;
     }
     
     // Validar contraseña vacía
     if (contrasena.isEmpty()) {
-        QMessageBox::warning(this, tr("Error"), tr("Por favor ingrese una contraseña."));
+        emit mostrarMensaje(tr("Por favor ingrese una contraseña."), ToastNotification::Warning);
         ui->txtContrasena->setFocus();
         return false;
     }
     
     // Validar longitud de contraseña
     if (!validarContrasena(contrasena)) {
-        QMessageBox::warning(
-            this,
-            tr("Error"),
-            tr("La contraseña debe tener al menos 6 caracteres.")
-        );
+        emit mostrarMensaje(tr("La contraseña debe tener al menos 6 caracteres."), ToastNotification::Warning);
         ui->txtContrasena->setFocus();
         return false;
     }
     
     // Validar confirmación de contraseña
     if (contrasena != confirmarContrasena) {
-        QMessageBox::warning(this, tr("Error"), tr("Las contraseñas no coinciden."));
+        emit mostrarMensaje(tr("Las contraseñas no coinciden."), ToastNotification::Warning);
         ui->txtConfirmarContrasena->setFocus();
         return false;
     }
-    
-    // Validar avatar (opcional pero mostrar advertencia)
+
+    // Si no hay avatar, continuar silenciosamente usando el predeterminado
     if (m_avatarImage.isNull()) {
-        QMessageBox::StandardButton respuesta = QMessageBox::question(
-            this,
-            tr("Avatar no seleccionado"),
-            tr("No ha seleccionado un avatar. ¿Desea continuar sin avatar?"),
-            QMessageBox::Yes | QMessageBox::No
-        );
-        
-        if (respuesta == QMessageBox::No) {
-            return false;
-        }
+        emit mostrarMensaje(tr("No seleccionó un avatar; se usará el predeterminado."), ToastNotification::Info);
     }
-    
+
     return true;
 }
 

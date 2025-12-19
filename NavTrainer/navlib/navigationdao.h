@@ -21,6 +21,7 @@ public:
 
     void saveUser(User &user);
     void updateUser(const User &user);
+    void updateUserNickName(const QString &oldNickName, const User &user);
     void deleteUser(const QString &nickName);
 
     QVector<Session> loadSessionsFor(const QString &nickName);

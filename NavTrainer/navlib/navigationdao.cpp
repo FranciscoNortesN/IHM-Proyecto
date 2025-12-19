@@ -216,6 +216,29 @@ void NavigationDAO::updateUser(const User &user)
     }
 }
 
+void NavigationDAO::updateUserNickName(const QString &oldNickName, const User &user)
+{
+    const char *sql =
+        "UPDATE user SET nickName=?, email=?, password=?, avatar=?, birthdate=? "
+        "WHERE nickName=?;";
+
+    QSqlQuery q(m_db);
+    if (!q.prepare(QString::fromUtf8(sql))) {
+        throwSqlError("updateUserNickName.prepare", q.lastError());
+    }
+
+    q.bindValue(0, user.nickName());
+    q.bindValue(1, user.email());
+    q.bindValue(2, user.password());
+    q.bindValue(3, imageToPng(user.avatar()));
+    q.bindValue(4, dateToDb(user.birthdate()));
+    q.bindValue(5, oldNickName);
+
+    if (!q.exec()) {
+        throwSqlError("updateUserNickName.exec", q.lastError());
+    }
+}
+
 void NavigationDAO::deleteUser(const QString &nickName)
 {
     QSqlQuery q(m_db);

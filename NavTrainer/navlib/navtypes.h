@@ -80,6 +80,7 @@ public:
     const QDate   &birthdate() const { return m_birthdate; }
 
     void setEmail(const QString &e) { m_email = e; }
+    void setNickName(const QString &n) { m_nickName = n; }
     void setPassword(const QString &p) { m_password = p; }
     void setAvatar(const QImage &img) { m_avatar = img; }
     void setBirthdate(const QDate &d) { m_birthdate = d; }

@@ -1,7 +1,7 @@
 #include "user.h"
 #include "ui_user.h"
-#include <QMessageBox>
 #include <QRegularExpression>
+#include "toastnotification.h"
 
 LoginWidget::LoginWidget(NavigationDAO *dao, QWidget *parent)
     : QWidget(parent)
@@ -27,19 +27,19 @@ void LoginWidget::onIniciarSesion()
     
     // Validar campos vacíos
     if (usuario.isEmpty()) {
-        QMessageBox::warning(this, tr("Error"), tr("Por favor ingrese su nombre de usuario."));
+        emit mostrarMensaje(tr("Por favor ingrese su nombre de usuario."), ToastNotification::Warning);
         ui->txtUsuario->setFocus();
         return;
     }
     
     if (contrasena.isEmpty()) {
-        QMessageBox::warning(this, tr("Error"), tr("Por favor ingrese su contraseña."));
+        emit mostrarMensaje(tr("Por favor ingrese su contraseña."), ToastNotification::Warning);
         ui->txtContrasena->setFocus();
         return;
     }
     
     if (!m_dao) {
-        QMessageBox::critical(this, tr("Error"), tr("No hay conexión a la base de datos."));
+        emit mostrarMensaje(tr("No hay conexión a la base de datos."), ToastNotification::Error);
         return;
     }
     
@@ -67,21 +67,13 @@ void LoginWidget::onIniciarSesion()
         }
         
         if (!usuarioEncontrado) {
-            QMessageBox::warning(
-                this,
-                tr("Error"),
-                tr("Usuario o contraseña incorrectos.")
-            );
+            emit mostrarMensaje(tr("Usuario o contraseña incorrectos."), ToastNotification::Warning);
             ui->txtContrasena->clear();
             ui->txtContrasena->setFocus();
         }
         
     } catch (const NavDAOException &e) {
-        QMessageBox::critical(
-            this,
-            tr("Error de Base de Datos"),
-            tr("Error al acceder a la base de datos: %1").arg(e.what())
-        );
+        emit mostrarMensaje(tr("Error al acceder a la base de datos: %1").arg(e.what()), ToastNotification::Error);
     }
 }
 
