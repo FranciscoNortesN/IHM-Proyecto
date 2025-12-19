@@ -68,7 +68,7 @@ public:
     void clearUserAnnotations();
     void undoLastAnnotation();
     void setProjectionLinesVisible(bool visible);
-    QGraphicsPathItem *addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg);
+    QGraphicsPathItem *addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg, qreal rotationOffsetDeg = 0.0);
     QColor drawingColor() const { return m_drawingColor; }
     int strokeWidth() const { return m_strokeWidth; }
     int strokeOpacity() const { return m_strokeOpacity; }

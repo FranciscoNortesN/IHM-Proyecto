@@ -203,10 +203,13 @@ public:
         : MapToolItem(toolId, resourcePath, view)
     {
         Q_UNUSED(resourcePath);
+        // Accept both buttons: left for rotate+paint, right for rotate only
         setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
         setAcceptHoverEvents(true);  // Enable hover for cursor feedback
         setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
         setCursor(Qt::ArrowCursor);
+        // Prevent moving by dragging legs - only allow moving via hinge area (beginMove)
+        setFlag(QGraphicsItem::ItemIsMovable, false);
         
         // Override the base class scale - compass needs to be larger
         setScale(1.0 * 1.5);
@@ -442,7 +445,8 @@ protected:
         
         if (distToPencil <= 40.0)
         {
-            setCursor(Qt::CrossCursor);  // Pencil tip - for drawing
+            // Pencil tip — left-drag rotates the whole compass (anchored at pivot tip)
+            setCursor(Qt::PointingHandCursor);  // Pencil tip - for rotating
         }
         else if (distToPivot <= 40.0)
         {
@@ -478,8 +482,17 @@ protected:
         // Use larger threshold for tips (40 pixels)
         if (distToPencil <= 40.0)
         {
-            // Drag pencil leg - left click draws arc, right click just adjusts spread
-            beginArcDraw(event, event->button() == Qt::LeftButton);
+            // Pencil tip: left-drag rotates & paints, right-drag rotates without painting
+            if (event->button() == Qt::LeftButton)
+            {
+                beginRotateFromPencil(event); // rotate and paint
+            }
+            else if (event->button() == Qt::RightButton)
+            {
+                // rotate without painting
+                beginRotateWhole(event);
+                m_rotateStartedFromPencil = false;
+            }
             event->accept();
             return;
         }
@@ -506,16 +519,18 @@ protected:
 
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
     {
-        if (m_drawingArc)
+        // Give rotation priority: when rotating the whole item (including pencil-started rotations),
+        // update rotation first so the compass actually rotates while painting.
+        if (m_rotatingWhole)
         {
-            updateArcDraw(event);
+            updateRotateWhole(event);
             event->accept();
             return;
         }
 
-        if (m_rotatingWhole)
+        if (m_drawingArc)
         {
-            updateRotateWhole(event);
+            updateArcDraw(event);
             event->accept();
             return;
         }
@@ -532,18 +547,32 @@ protected:
 
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
     {
+        // If we were drawing an arc (possibly because rotation started from pencil), finalize it
         if (m_drawingArc)
         {
             finalizeArcDraw();
             unsetCursor();
-            event->accept();
-            return;
+            // Do NOT return here; rotation finalization (below) must also run when applicable
         }
 
         if (m_rotatingWhole)
         {
             m_rotatingWhole = false;
             unsetCursor();
+            // Preserve pivot tip position when resetting transform origin back to hinge center
+            QPointF anchorBefore = mapToScene(pivotTipLocal());
+            setTransformOriginPoint(QPointF(0, 0));
+            QPointF anchorAfter = mapToScene(pivotTipLocal());
+            QPointF offset = anchorBefore - anchorAfter;
+            if (!qFuzzyIsNull(offset.x()) || !qFuzzyIsNull(offset.y()))
+            {
+                setPos(pos() + offset);
+            }
+            // Clear the pencil-rotation drawing flag if it was set
+            if (m_rotateStartedFromPencil)
+            {
+                m_rotateStartedFromPencil = false;
+            }
             event->accept();
             return;
         }
@@ -574,14 +603,16 @@ private:
     bool m_rotatingWhole = false;
     bool m_drawingArc = false;
     bool m_shouldPaint = false;
+    bool m_rotateStartedFromPencil = false;  // True when pencil tip started the rotation (so we should paint)
     
     QPointF m_moveSceneOffset;
     qreal m_rotateStartAngle = 0.0;
-    qreal m_rotateStartPivot = 0.0;
-    qreal m_rotateStartPencil = 0.0;
+    qreal m_itemRotationStart = 0.0;
+    QPointF m_rotateAnchorScene;
 
     // Arc drawing state
-    QPointF m_arcCenterMapScene;  // Pivot tip position in map scene coords
+    QPointF m_arcCenterMapScene;  // Pivot tip position in map scene coords (last used)
+    QPointF m_arcStartPencilMapScene; // Pencil tip map scene pos at start of arc (anchors start angle)
     qreal m_arcStartAngle = 0.0;
     qreal m_arcCurrentAngle = 0.0;
     qreal m_arcRadius = 0.0;
@@ -617,29 +648,92 @@ private:
     {
         if (!event) return;
         m_rotatingWhole = true;
-        m_rotateStartAngle = QLineF(QPointF(0, 0), event->pos()).angle();
-        m_rotateStartPivot = m_pivotRotationDeg;
-        m_rotateStartPencil = m_pencilRotationDeg;
+        // Anchor around the pivot tip so the pivot tip stays fixed in scene coords
+        m_rotateAnchorScene = mapToScene(pivotTipLocal());
+        // Angle between anchor (pivot tip) and mouse pos at start (scene coords)
+        m_rotateStartAngle = QLineF(m_rotateAnchorScene, event->scenePos()).angle();
+        // Store current item rotation so we can rotate the whole item
+        m_itemRotationStart = rotation();
+        // Use the pivot tip as the transform origin so it acts like a real compass anchor
+        setTransformOriginPoint(pivotTipLocal());
+        setCursor(Qt::SizeAllCursor);
+    }
+
+    // Begin rotation that originates from the pencil tip and should also paint the arc
+    void beginRotateFromPencil(QGraphicsSceneMouseEvent *event)
+    {
+        if (!event || !m_view) return;
+        // Start the same rotation behavior
+        beginRotateWhole(event);
+        m_rotateStartedFromPencil = true;
+
+        // Prepare arc drawing centered at the pivot tip in MAP scene coords
+        QPointF pivotToolScene = mapToScene(pivotTipLocal());
+        QPoint pivotViewport = pivotToolScene.toPoint();
+        m_arcCenterMapScene = m_view->mapToScene(pivotViewport);
+
+        QPointF pencilToolScene = mapToScene(pencilTipLocal());
+        QPoint pencilViewport = pencilToolScene.toPoint();
+        QPointF pencilMapScene = m_view->mapToScene(pencilViewport);
+
+        m_arcRadius = QLineF(m_arcCenterMapScene, pencilMapScene).length();
+        // Store the pencil map position at start to anchor the arc start angle even if the compass moves
+        m_arcStartPencilMapScene = pencilMapScene;
+        m_arcStartAngle = QLineF(m_arcCenterMapScene, pencilMapScene).angle();
+        m_arcCurrentAngle = m_arcStartAngle;
+        m_drawingArc = true;
+        m_shouldPaint = true;
+        createArcPreview();
     }
 
     void updateRotateWhole(QGraphicsSceneMouseEvent *event)
     {
         if (!event) return;
-        qreal currentAngle = QLineF(QPointF(0, 0), event->pos()).angle();
+        // Compute angle delta relative to the anchored pivot tip in scene coordinates
+        qreal currentAngle = QLineF(m_rotateAnchorScene, event->scenePos()).angle();
         qreal delta = currentAngle - m_rotateStartAngle;
-        m_pivotRotationDeg = m_rotateStartPivot - delta;
-        m_pencilRotationDeg = m_rotateStartPencil - delta;
+        // Compute new rotation value
+        qreal newRotation = m_itemRotationStart - delta;
+        // Apply rotation
+        setRotation(newRotation);
+        // Ensure the pivot tip remains fixed in scene coordinates by adjusting position
+        QPointF newAnchorScene = mapToScene(pivotTipLocal());
+        QPointF offset = m_rotateAnchorScene - newAnchorScene;
+        if (!qFuzzyIsNull(offset.x()) || !qFuzzyIsNull(offset.y()))
+        {
+            // Move the item by the offset (in parent coordinates)
+            setPos(pos() + offset);
+        }
         update();
         if (scene()) scene()->update();
+
+        // If rotation started from the pencil tip, update the arc preview to follow the pencil
+        if (m_rotateStartedFromPencil && m_view)
+        {
+            QPointF pencilToolScene = mapToScene(pencilTipLocal());
+            QPoint pencilViewport = pencilToolScene.toPoint();
+            QPointF pencilMapScene = m_view->mapToScene(pencilViewport);
+            m_arcCurrentAngle = QLineF(m_arcCenterMapScene, pencilMapScene).angle();
+            if (m_arcPreview)
+            {
+                updateArcPreviewPath();
+            }
+        }
     }
 
     void beginArcDraw(QGraphicsSceneMouseEvent *event, bool shouldPaint)
     {
         if (!event || !m_view) return;
 
+        // Ensure we are not in a whole-item rotate state
+        m_rotatingWhole = false;
+        // Reset transform origin to hinge center so rotation of the item isn't affected
+        setTransformOriginPoint(QPointF(0, 0));
+
         m_drawingArc = true;
         m_shouldPaint = shouldPaint;
-        
+        setCursor(Qt::CrossCursor);
+
         // Get the pivot tip position in MAP scene coordinates
         // Tool scene pos -> viewport pos -> map scene pos
         QPointF pivotToolScene = mapToScene(pivotTipLocal());
@@ -653,6 +747,8 @@ private:
         
         // Calculate radius and start angle in map scene
         m_arcRadius = QLineF(m_arcCenterMapScene, pencilMapScene).length();
+        // Store pencil map position at start
+        m_arcStartPencilMapScene = pencilMapScene;
         m_arcStartAngle = QLineF(m_arcCenterMapScene, pencilMapScene).angle();
         m_arcCurrentAngle = m_arcStartAngle;
         
@@ -680,9 +776,8 @@ private:
         QPoint pencilViewport = pencilToolScene.toPoint();
         QPointF pencilMapScene = m_view->mapToScene(pencilViewport);
         
-        // Update current angle for arc
+        // Update current angle for arc (keep radius fixed)
         m_arcCurrentAngle = QLineF(m_arcCenterMapScene, pencilMapScene).angle();
-        m_arcRadius = QLineF(m_arcCenterMapScene, pencilMapScene).length();
         
         if (m_shouldPaint && m_arcPreview)
         {
@@ -695,22 +790,36 @@ private:
 
     void finalizeArcDraw()
     {
-        if (m_shouldPaint && m_arcPreview)
+        if (m_shouldPaint && m_arcPreview && m_view)
         {
-            qreal span = m_arcCurrentAngle - m_arcStartAngle;
-            // Normalize span
-            while (span > 180) span -= 360;
-            while (span < -180) span += 360;
-            
-            if (std::abs(span) >= 2.0 && m_view)
+            // Recompute pivot center at time of finalization to ensure it's exactly at the tip
+            QPointF pivotToolScene = mapToScene(pivotTipLocal());
+            QPoint pivotViewport = pivotToolScene.toPoint();
+            QPointF pivotMapScene = m_view->mapToScene(pivotViewport);
+
+            // Recompute start angle anchored to stored pencil start position
+            if (!m_arcStartPencilMapScene.isNull())
             {
-                m_view->addArcAnnotation(m_arcCenterMapScene, m_arcRadius, m_arcStartAngle, span);
+                m_arcStartAngle = QLineF(pivotMapScene, m_arcStartPencilMapScene).angle();
+            }
+
+            qreal span = m_arcCurrentAngle - m_arcStartAngle;
+            // Convert to a positive sweep angle in [0,360)
+            while (span < 0) span += 360;
+            while (span >= 360) span -= 360;
+
+            if (span >= 2.0)
+            {
+                // Store start at 0.0 and use rotationOffset to map logical 0° to the pencil-start location
+                // Use the pencil-start angle as the start so the visual 0° is at the pencil
+                m_view->addArcAnnotation(pivotMapScene, m_arcRadius, m_arcStartAngle, span);
             }
         }
         
         discardArcPreview();
         m_drawingArc = false;
         m_shouldPaint = false;
+        m_arcStartPencilMapScene = QPointF();
     }
 
     void createArcPreview()
@@ -729,11 +838,24 @@ private:
 
     void updateArcPreviewPath()
     {
-        if (!m_arcPreview) return;
+        if (!m_arcPreview || !m_view) return;
+
+        // Recompute pivot center in map scene coordinates from current pivot tip position
+        QPointF pivotToolScene = mapToScene(pivotTipLocal());
+        QPoint pivotViewport = pivotToolScene.toPoint();
+        QPointF pivotMapScene = m_view->mapToScene(pivotViewport);
+        m_arcCenterMapScene = pivotMapScene; // keep for other uses
+
+        // Recompute start angle anchored to the pencil map position at the start
+        if (!m_arcStartPencilMapScene.isNull())
+        {
+            m_arcStartAngle = QLineF(m_arcCenterMapScene, m_arcStartPencilMapScene).angle();
+        }
 
         qreal span = m_arcCurrentAngle - m_arcStartAngle;
-        while (span > 180) span -= 360;
-        while (span < -180) span += 360;
+        // Convert to a positive sweep angle in [0, 360)
+        while (span < 0) span += 360;
+        while (span >= 360) span -= 360;
 
         QPainterPath path;
         QRectF arcRect(m_arcCenterMapScene.x() - m_arcRadius,
@@ -769,7 +891,7 @@ public:
         // IMPORTANT: Disable automatic moving - we handle it manually via handlebars
         setFlag(QGraphicsItem::ItemIsMovable, false);
         
-        setAcceptedMouseButtons(Qt::LeftButton | Qt::RightButton);
+        setAcceptedMouseButtons(Qt::LeftButton);
         setAcceptHoverEvents(true);
         setFlag(QGraphicsItem::ItemSendsScenePositionChanges, true);
         setCursor(Qt::ArrowCursor);
@@ -2441,17 +2563,33 @@ void Carta::cancelLinePreview()
     m_lineDrawing = false;
 }
 
-QGraphicsPathItem *Carta::addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg)
+QGraphicsPathItem *Carta::addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg, qreal rotationOffsetDeg)
 {
     if (radius <= 0.0 || qFuzzyIsNull(spanAngleDeg))
     {
         return nullptr;
     }
 
+    // Normalize span into [0, 360)
+    qreal span = spanAngleDeg;
+    while (span < 0) span += 360;
+    while (span >= 360) span -= 360;
+
+    // Build path starting at startAngleDeg (logical 0° can be used) and then rotate by rotationOffsetDeg
     QPainterPath path;
     const QRectF rect(center.x() - radius, center.y() - radius, radius * 2, radius * 2);
     path.arcMoveTo(rect, startAngleDeg);
-    path.arcTo(rect, startAngleDeg, spanAngleDeg);
+    path.arcTo(rect, startAngleDeg, span);
+
+    // Apply rotation offset around the center so the logical 0° (startAngleDeg) maps to the desired location
+    if (!qFuzzyIsNull(rotationOffsetDeg))
+    {
+        QTransform rot;
+        rot.translate(center.x(), center.y());
+        rot.rotate(rotationOffsetDeg);
+        rot.translate(-center.x(), -center.y());
+        path = rot.map(path);
+    }
 
     auto *arcItem = new QGraphicsPathItem(path);
     QPen pen(m_drawingColor);

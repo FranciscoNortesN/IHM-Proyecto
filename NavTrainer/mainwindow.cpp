@@ -29,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    this->setWindowTitle("NavTrainer");
     
     // Inicializar la base de datos
     // Usar la base de datos en la carpeta data
