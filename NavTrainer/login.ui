@@ -270,18 +270,12 @@
        </widget>
       </item>
       <item>
-       <widget class="QSpinBox" name="spnDia">
+       <widget class="QComboBox" name="cbxDia">
         <property name="minimumSize">
          <size>
           <width>60</width>
           <height>30</height>
          </size>
-        </property>
-        <property name="maximum">
-         <number>31</number>
-        </property>
-        <property name="value">
-         <number>1</number>
         </property>
        </widget>
       </item>
@@ -306,21 +300,12 @@
        </widget>
       </item>
       <item>
-       <widget class="QSpinBox" name="spnMes">
+       <widget class="QComboBox" name="cbxMes">
         <property name="minimumSize">
          <size>
-          <width>60</width>
+          <width>100</width>
           <height>30</height>
          </size>
-        </property>
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>12</number>
-        </property>
-        <property name="value">
-         <number>1</number>
         </property>
        </widget>
       </item>
@@ -353,13 +338,50 @@
          </size>
         </property>
         <property name="minimum">
-         <number>1900</number>
+         <number>1925</number>
         </property>
         <property name="maximum">
          <number>2024</number>
         </property>
         <property name="value">
          <number>2008</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnCalendar">
+        <property name="minimumSize">
+         <size>
+          <width>35</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>35</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton { background-color: rgba(20, 40, 60, 200); border: 1px solid rgba(30, 60, 100, 150); border-radius: 4px; }
+QPushButton:hover { background-color: rgba(30, 55, 85, 230); }
+QPushButton:pressed { background-color: rgba(15, 35, 55, 200); }</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="Assets.qrc">
+          <normaloff>:/assets/icons/calendar-white.svg</normaloff>:/assets/icons/calendar-white.svg</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="flat">
+         <bool>false</bool>
         </property>
        </widget>
       </item>

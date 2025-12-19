@@ -15,10 +15,41 @@
 }
 
 #overlayChangeButton {
-    background-color: rgba(50, 60, 80, 220);
-    border: none;
+    background-color: rgba(30, 40, 55, 240);
+    color: rgba(100, 120, 140, 255);
+    border: 1px solid rgba(40, 60, 80, 200);
 }
 
 #overlayChangeButton:hover {
-    background-color: rgba(50, 60, 80, 240);
+    background-color: rgba(35, 50, 70, 255);
+    color: rgba(120, 140, 160, 255);
 }
+
+#overlayChangeButton:pressed {
+    background-color: rgba(25, 35, 50, 255);
+}
+
+QToolButton {
+    background-color: rgba(20, 30, 45, 220);
+    color: rgba(100, 120, 140, 255);
+    border: 1px solid rgba(30, 50, 70, 180);
+}
+
+QToolButton:hover {
+    background-color: rgba(30, 45, 65, 240);
+}
+
+QToolButton:pressed {
+    background-color: rgba(15, 25, 40, 240);
+}
+
+#overlayToolButton {
+    background-color: rgba(25, 40, 60, 200);
+    border: 1px solid rgba(40, 65, 90, 150);
+}
+
+#overlayToolButton:hover {
+    background-color: rgba(35, 55, 80, 230);
+    border: 1px solid rgba(60, 85, 110, 180);
+}
+

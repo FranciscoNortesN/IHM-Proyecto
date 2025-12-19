@@ -6,6 +6,12 @@
 #include <QDate>
 #include <QPainter>
 #include <QPainterPath>
+#include <QCalendarWidget>
+#include <QComboBox>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QDialog>
 
 RegisterWidget::RegisterWidget(NavigationDAO *dao, QWidget *parent)
     : QWidget(parent)
@@ -14,10 +20,14 @@ RegisterWidget::RegisterWidget(NavigationDAO *dao, QWidget *parent)
 {
     ui->setupUi(this);
     
+    // Inicializar combobox de fecha
+    inicializarComboBoxesFecha();
+    
     // Conectar señales y slots
     connect(ui->btnSeleccionarAvatar, &QPushButton::clicked, this, &RegisterWidget::onSeleccionarAvatar);
     connect(ui->btnCrearCuenta, &QPushButton::clicked, this, &RegisterWidget::onCrearCuenta);
     connect(ui->btnYaTengoCuenta, &QPushButton::clicked, this, &RegisterWidget::onYaTengoCuenta);
+    connect(ui->btnCalendar, &QPushButton::clicked, this, &RegisterWidget::onAbrirCalendario);
 }
 
 RegisterWidget::~RegisterWidget()
@@ -113,8 +123,8 @@ void RegisterWidget::onCrearCuenta()
         // Limpiar formulario
         ui->txtNickname->clear();
         ui->txtCorreo->clear();
-        ui->spnDia->setValue(1);
-        ui->spnMes->setValue(1);
+        ui->cbxDia->setCurrentIndex(0);
+        ui->cbxMes->setCurrentIndex(0);
         ui->spnAno->setValue(2008);
         ui->txtContrasena->clear();
         ui->txtConfirmarContrasena->clear();
@@ -139,8 +149,8 @@ bool RegisterWidget::validarFormulario()
 {
     QString nickName = ui->txtNickname->text().trimmed();
     QString correo = ui->txtCorreo->text().trimmed();
-    int dia = ui->spnDia->value();
-    int mes = ui->spnMes->value();
+    int dia = ui->cbxDia->currentText().toInt();
+    int mes = ui->cbxMes->currentIndex() + 1;  // currentIndex es 0-based
     int ano = ui->spnAno->value();
     QString contrasena = ui->txtContrasena->text();
     QString confirmarContrasena = ui->txtConfirmarContrasena->text();
@@ -170,7 +180,7 @@ bool RegisterWidget::validarFormulario()
     QDate fechaNacimiento(ano, mes, dia);
     if (!fechaNacimiento.isValid()) {
         emit mostrarMensaje(tr("Por favor ingrese una fecha de nacimiento válida."), ToastNotification::Warning);
-        ui->spnDia->setFocus();
+        ui->cbxDia->setFocus();
         return false;
     }
     
@@ -239,4 +249,84 @@ bool RegisterWidget::nickNameExiste(const QString &nickName)
     } catch (const NavDAOException &) {
         return false;
     }
+}
+void RegisterWidget::inicializarComboBoxesFecha()
+{
+    // Inicializar combo box de días (1-31)
+    for (int i = 1; i <= 31; ++i) {
+        ui->cbxDia->addItem(QString::number(i));
+    }
+    ui->cbxDia->setCurrentIndex(0);  // Seleccionar día 1
+    
+    // Inicializar combo box de meses (nombres en español)
+    QStringList meses;
+    meses << "Enero" << "Febrero" << "Marzo" << "Abril" << "Mayo" << "Junio"
+          << "Julio" << "Agosto" << "Septiembre" << "Octubre" << "Noviembre" << "Diciembre";
+    
+    foreach (const QString &mes, meses) {
+        ui->cbxMes->addItem(mes);
+    }
+    ui->cbxMes->setCurrentIndex(0);  // Seleccionar enero
+}
+
+QDate RegisterWidget::obtenerFechaSeleccionada() const
+{
+    int dia = ui->cbxDia->currentText().toInt();
+    int mes = ui->cbxMes->currentIndex() + 1;  // currentIndex es 0-based
+    int ano = ui->spnAno->value();
+    
+    return QDate(ano, mes, dia);
+}
+
+void RegisterWidget::onAbrirCalendario()
+{
+    // Crear un diálogo con un calendario
+    QDialog *dialogoCalendario = new QDialog(this);
+    dialogoCalendario->setWindowTitle(tr("Seleccionar Fecha"));
+    dialogoCalendario->setModal(true);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dialogoCalendario);
+    
+    QCalendarWidget *calendario = new QCalendarWidget(dialogoCalendario);
+    
+    // Establecer la fecha actual del formulario en el calendario
+    QDate fechaActual = obtenerFechaSeleccionada();
+    calendario->setSelectedDate(fechaActual);
+    
+    // Conectar selección de fecha
+    connect(calendario, &QCalendarWidget::clicked, this, [this, dialogoCalendario](const QDate &date) {
+        onFechaCalendarioSeleccionada(date);
+        dialogoCalendario->accept();
+    });
+    
+    layout->addWidget(calendario);
+    
+    // Añadir botones
+    QHBoxLayout *layoutBotones = new QHBoxLayout();
+    QPushButton *btnAceptar = new QPushButton(tr("Aceptar"));
+    QPushButton *btnCancelar = new QPushButton(tr("Cancelar"));
+    
+    connect(btnAceptar, &QPushButton::clicked, this, [this, calendario, dialogoCalendario]() {
+        onFechaCalendarioSeleccionada(calendario->selectedDate());
+        dialogoCalendario->accept();
+    });
+    
+    connect(btnCancelar, &QPushButton::clicked, dialogoCalendario, &QDialog::reject);
+    
+    layoutBotones->addStretch();
+    layoutBotones->addWidget(btnAceptar);
+    layoutBotones->addWidget(btnCancelar);
+    
+    layout->addLayout(layoutBotones);
+    
+    dialogoCalendario->exec();
+    delete dialogoCalendario;
+}
+
+void RegisterWidget::onFechaCalendarioSeleccionada(const QDate &date)
+{
+    // Actualizar los combobox y spinbox con la fecha seleccionada
+    ui->cbxDia->setCurrentIndex(date.day() - 1);
+    ui->cbxMes->setCurrentIndex(date.month() - 1);
+    ui->spnAno->setValue(date.year());
 }

@@ -23,6 +23,8 @@ private slots:
     void onSeleccionarAvatar();
     void onCrearCuenta();
     void onYaTengoCuenta();
+    void onAbrirCalendario();
+    void onFechaCalendarioSeleccionada(const QDate &date);
 
 private:
     Ui::Login *ui;
@@ -33,6 +35,8 @@ private:
     bool validarCorreo(const QString &correo);
     bool validarContrasena(const QString &contrasena);
     bool nickNameExiste(const QString &nickName);
+    void inicializarComboBoxesFecha();
+    QDate obtenerFechaSeleccionada() const;
 
 signals:
     void cuentaCreada(const QString &nickName);
