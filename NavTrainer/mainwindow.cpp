@@ -449,16 +449,23 @@ void MainWindow::onUserButtonClicked()
     
     // Conectar señales para cambiar entre pantallas
     connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
-        m_loginWidget->reject();
+        m_loginWidget->hide();
         int result = m_registerWidget->exec();
         if (result == QDialog::Rejected) {
-            m_loginWidget->exec();
+            m_loginWidget->show();
+        } else {
+            m_loginWidget->close();
         }
     });
     
     connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
-        m_registerWidget->reject();
-        m_loginWidget->exec();
+        m_registerWidget->hide();
+        int result = m_loginWidget->exec();
+        if (result == QDialog::Rejected) {
+            m_registerWidget->show();
+        } else {
+            m_registerWidget->close();
+        }
     });
 
     connect(m_registerWidget, &RegisterWidget::cuentaCreada, this, [this](const QString &nickName) {
@@ -466,6 +473,9 @@ void MainWindow::onUserButtonClicked()
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
         m_registerWidget->accept();
+        if (m_loginWidget) {
+            m_loginWidget->close();
+        }
     });
 
     connect(m_registerWidget, &RegisterWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo) {
@@ -474,19 +484,17 @@ void MainWindow::onUserButtonClicked()
     
     // Limpiar cuando se cierren las ventanas
     connect(m_loginWidget, &QDialog::finished, this, [this]() {
+        m_loginWidget->deleteLater();
         m_loginWidget = nullptr;
     });
     
     connect(m_registerWidget, &QDialog::finished, this, [this]() {
+        m_registerWidget->deleteLater();
         m_registerWidget = nullptr;
     });
     
     // Mostrar el login inicialmente como modal
-    m_loginWidget->setAttribute(Qt::WA_DeleteOnClose);
     m_loginWidget->exec();
-    
-    // Configurar también el registro
-    m_registerWidget->setAttribute(Qt::WA_DeleteOnClose);
 }
 
 void MainWindow::updateUserAvatar(const QString &nickName)
