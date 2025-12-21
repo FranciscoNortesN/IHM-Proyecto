@@ -27,6 +27,7 @@ protected:
 
 private slots:
     void onCheckButtonClicked();
+    void onToggleAnswersClicked();
 
 private:
     Ui::problem *ui;
@@ -35,6 +36,8 @@ private:
     NavigationDAO *m_dao;
     QString m_userNickname;
     MainWindow *m_mainWindow = nullptr;
+    bool m_answersVisible = true;
+    QSize m_originalSize;
     
     void setupProblem();
     void recordResult(bool isCorrect);

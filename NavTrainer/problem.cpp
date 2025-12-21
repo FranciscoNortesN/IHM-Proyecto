@@ -24,6 +24,10 @@ ProblemWidget::ProblemWidget(const Problem &problem, NavigationDAO *dao, const Q
     m_buttonGroup->addButton(ui->radioButton_4, 3);
     
     connect(ui->pushButton, &QPushButton::clicked, this, &ProblemWidget::onCheckButtonClicked);
+    connect(ui->toggleAnswersButton, &QPushButton::clicked, this, &ProblemWidget::onToggleAnswersClicked);
+    
+    // Configurar botón de ocultar/mostrar respuestas
+    ui->toggleAnswersButton->setIcon(QIcon(":/assets/icons/closeEye.svg"));
     
     setupProblem();
 }
@@ -38,6 +42,7 @@ void ProblemWidget::setupProblem()
     // Configurar tamaño y propiedades de la ventana
     setMinimumSize(400, 300);
     resize(500, 400);
+    m_originalSize = size();
     
     // Mostrar el texto del problema con ajuste de línea
     ui->label->setText(m_problem.text());
@@ -122,4 +127,30 @@ void ProblemWidget::changeEvent(QEvent *event)
         }
     }
     QWidget::changeEvent(event);
+}
+
+void ProblemWidget::onToggleAnswersClicked()
+{
+    m_answersVisible = !m_answersVisible;
+    
+    // Cambiar icono
+    if (m_answersVisible) {
+        ui->toggleAnswersButton->setIcon(QIcon(QStringLiteral(":/assets/icons/closeEye.svg")));
+    } else {
+        ui->toggleAnswersButton->setIcon(QIcon(QStringLiteral(":/assets/icons/openEye.svg")));
+    }
+    
+    // Mostrar/ocultar respuestas
+    ui->radioButton->setVisible(m_answersVisible);
+    ui->radioButton_2->setVisible(m_answersVisible);
+    ui->radioButton_3->setVisible(m_answersVisible);
+    ui->radioButton_4->setVisible(m_answersVisible);
+    
+    // Ajustar solo la altura de la ventana
+    if (m_answersVisible) {
+        resize(m_originalSize);
+    } else {
+        int newHeight = ui->label->height() + ui->line->height() + ui->toggleAnswersButton->height() + 100;
+        resize(width(), newHeight);
+    }
 }
