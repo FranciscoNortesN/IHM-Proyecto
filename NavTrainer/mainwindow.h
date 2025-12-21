@@ -52,6 +52,8 @@ private:
     
     QList<ProblemWidget*> m_minimizedProblems;
     QList<QPushButton*> m_minimizedButtons;
+    QList<QString> m_minimizedProblemNames;
+    QWidget *m_minimizedProblemsContainer;
 
     void setupMapView();
     void setupOverlayPanel();

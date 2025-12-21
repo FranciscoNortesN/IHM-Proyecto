@@ -25,6 +25,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
+#include <QRegularExpression>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -41,6 +42,9 @@ MainWindow::MainWindow(QWidget *parent)
     
     // Inicializar notificación toast
     m_toastNotification = new ToastNotification(this);
+    
+    // Inicializar contenedor de problemas minimizados
+    m_minimizedProblemsContainer = ui->minimized_problems_container;
 
     connect(ui->problem_button, &QPushButton::clicked, this, &MainWindow::onProblemButtonClicked);
     connect(ui->stats_button, &QPushButton::clicked, this, &MainWindow::onStatsButtonClicked);
@@ -547,18 +551,34 @@ void MainWindow::addMinimizedProblem(ProblemWidget *problem)
     
     m_minimizedProblems.append(problem);
     
-    QPushButton *button = new QPushButton(this);
-    button->setIcon(QIcon(":/assets/icons/problemas.svg"));
-    button->setIconSize(QSize(40, 40));
+    // Obtener el nombre del problema desde la ventana
+    QString problemTitle = problem->windowTitle();
+    
+    // Extraer solo el número del problema (ej: "Ejercicio 3" -> "E3")
+    QString buttonText = "E";
+    QRegularExpression regex("\\d+");
+    QRegularExpressionMatch match = regex.match(problemTitle);
+    if (match.hasMatch()) {
+        buttonText += match.captured();
+    }
+    
+    m_minimizedProblemNames.append(buttonText);
+    
+    // Crear botón con texto
+    QPushButton *button = new QPushButton(buttonText, this);
     button->setFixedSize(50, 50);
     button->setStyleSheet(
         "QPushButton {"
+        "    border: none;"
+        "    background-color: transparent;"
+        "    color: white;"
         "    border-radius: 25px;"
-        "    background-color: #0078d4;"
-        "    border: 2px solid #005a9e;"
+        "    padding: 0px;"
+        "    font-weight: bold;"
+        "    font-size: 18px;"
         "}"
         "QPushButton:hover {"
-        "    background-color: #106ebe;"
+        "    color: #d0d0d0;"
         "}"
     );
     
@@ -571,7 +591,15 @@ void MainWindow::addMinimizedProblem(ProblemWidget *problem)
     });
     
     m_minimizedButtons.append(button);
-    updateMinimizedButtonsPosition();
+    
+    // Agregar el botón al layout del contenedor con alineación centrada
+    if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout()) {
+        QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(m_minimizedProblemsContainer->layout());
+        if (layout) {
+            layout->addWidget(button, 0, Qt::AlignHCenter);
+        }
+    }
+    
     button->show();
 }
 
@@ -583,28 +611,23 @@ void MainWindow::removeMinimizedProblem(ProblemWidget *problem)
     }
     
     m_minimizedProblems.removeAt(index);
+    m_minimizedProblemNames.removeAt(index);
     QPushButton *button = m_minimizedButtons.takeAt(index);
-    button->deleteLater();
     
-    updateMinimizedButtonsPosition();
+    // Remover del layout
+    if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout()) {
+        m_minimizedProblemsContainer->layout()->removeWidget(button);
+    }
+    
+    button->deleteLater();
 }
 
 void MainWindow::updateMinimizedButtonsPosition()
 {
-    int buttonSize = 50;
-    int margin = 10;
-    int spacing = 5;
-    
-    for (int i = 0; i < m_minimizedButtons.size(); ++i) {
-        QPushButton *button = m_minimizedButtons[i];
-        int x = width() - margin - buttonSize;
-        int y = height() - margin - buttonSize - (i * (buttonSize + spacing));
-        button->move(x, y);
-    }
+    // Ya no es necesario con el nuevo sistema de layout
 }
 
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
-    updateMinimizedButtonsPosition();
 }

@@ -148,7 +148,7 @@ void SelecPro::onRandomButtonClicked()
     const Problem &selectedProblem = m_problems[randomIndex];
     ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, nullptr);
     problemWindow->setAttribute(Qt::WA_DeleteOnClose);
-    problemWindow->setWindowFlags(Qt::Window);
+    problemWindow->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     problemWindow->setWindowTitle(tr("Ejercicio %1 (Aleatorio)").arg(randomIndex + 1));
     
     // Establecer referencia a MainWindow
@@ -174,7 +174,7 @@ void SelecPro::onProblemSelected()
         
         ProblemWidget *problemWindow = new ProblemWidget(selectedProblem, m_dao, m_userNickname, nullptr);
         problemWindow->setAttribute(Qt::WA_DeleteOnClose);
-        problemWindow->setWindowFlags(Qt::Window);
+        problemWindow->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
         problemWindow->setWindowTitle(tr("Ejercicio %1").arg(problemIndex + 1));
         
         // Establecer referencia a MainWindow
