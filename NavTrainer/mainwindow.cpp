@@ -158,7 +158,7 @@ void MainWindow::setupOverlayPanel()
             {
         if (m_carta)
         {
-            m_carta->setProjectionLinesVisible(enabled);
+            m_carta->setCrosshairPlacementEnabled(enabled);
         } });
 
     const QList<MapToolDescriptor> tools = {
@@ -429,9 +429,11 @@ void MainWindow::onUserButtonClicked()
         return;
     }
     
-    // Si los widgets ya existen, solo mostrar el login como modal
+    // Si los widgets ya existen, solo mostrar el login
     if (m_loginWidget) {
-        m_loginWidget->exec();
+        m_loginWidget->show();
+        m_loginWidget->raise();
+        m_loginWidget->activateWindow();
         return;
     }
     
@@ -444,7 +446,7 @@ void MainWindow::onUserButtonClicked()
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
-        m_loginWidget->accept();
+        m_loginWidget->close();
     });
 
     // Mostrar mensajes no bloqueantes desde los formularios
@@ -455,29 +457,23 @@ void MainWindow::onUserButtonClicked()
     // Conectar señales para cambiar entre pantallas
     connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
         m_loginWidget->hide();
-        int result = m_registerWidget->exec();
-        if (result == QDialog::Rejected) {
-            m_loginWidget->show();
-        } else {
-            m_loginWidget->close();
-        }
+        m_registerWidget->show();
+        m_registerWidget->raise();
+        m_registerWidget->activateWindow();
     });
     
     connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
         m_registerWidget->hide();
-        int result = m_loginWidget->exec();
-        if (result == QDialog::Rejected) {
-            m_registerWidget->show();
-        } else {
-            m_registerWidget->close();
-        }
+        m_loginWidget->show();
+        m_loginWidget->raise();
+        m_loginWidget->activateWindow();
     });
 
     connect(m_registerWidget, &RegisterWidget::cuentaCreada, this, [this](const QString &nickName) {
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
-        m_registerWidget->accept();
+        m_registerWidget->close();
         if (m_loginWidget) {
             m_loginWidget->close();
         }
@@ -498,8 +494,8 @@ void MainWindow::onUserButtonClicked()
         m_registerWidget = nullptr;
     });
     
-    // Mostrar el login inicialmente como modal
-    m_loginWidget->exec();
+    // Mostrar el login inicialmente (no modal)
+    m_loginWidget->show();
 }
 
 void MainWindow::updateUserAvatar(const QString &nickName)

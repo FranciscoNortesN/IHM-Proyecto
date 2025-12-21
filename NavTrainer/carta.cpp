@@ -1578,6 +1578,14 @@ void Carta::mousePressEvent(QMouseEvent *event)
 
     if (event->button() == Qt::LeftButton && m_mapItem)
     {
+        if (m_crosshairPlacementMode)
+        {
+            const QPointF scenePos = mapToScene(event->pos());
+            placeCrosshairAt(scenePos);
+            event->accept();
+            return;
+        }
+
         QGraphicsItem *clickedItem = itemAt(event->pos());
         if (!isToolItem(clickedItem))
         {
@@ -2990,6 +2998,12 @@ void Carta::setProjectionLinesVisible(bool visible)
     }
 }
 
+void Carta::setCrosshairPlacementEnabled(bool enabled)
+{
+    m_crosshairPlacementMode = enabled;
+    // Keep the drawn crosshair even when disabling the mode; placement is what toggles off
+}
+
 void Carta::updateProjectionLines()
 {
     clearProjectionLines();
@@ -3051,4 +3065,50 @@ void Carta::clearProjectionLines()
         delete line;
     }
     m_projectionLines.clear();
+}
+
+void Carta::placeCrosshairAt(const QPointF &scenePos)
+{
+    if (!scene())
+    {
+        return;
+    }
+
+    clearCrosshair();
+
+    const QRectF sceneRect = scene()->sceneRect();
+    if (!sceneRect.isValid())
+    {
+        return;
+    }
+
+    QPen pen(Qt::black);
+    pen.setWidth(2);
+    pen.setCosmetic(true);
+
+    m_crosshairHLine = new QGraphicsLineItem(sceneRect.left(), scenePos.y(), sceneRect.right(), scenePos.y());
+    m_crosshairHLine->setPen(pen);
+    m_crosshairHLine->setZValue(90.0);
+    m_scene.addItem(m_crosshairHLine);
+
+    m_crosshairVLine = new QGraphicsLineItem(scenePos.x(), sceneRect.top(), scenePos.x(), sceneRect.bottom());
+    m_crosshairVLine->setPen(pen);
+    m_crosshairVLine->setZValue(90.0);
+    m_scene.addItem(m_crosshairVLine);
+}
+
+void Carta::clearCrosshair()
+{
+    if (m_crosshairHLine)
+    {
+        m_scene.removeItem(m_crosshairHLine);
+        delete m_crosshairHLine;
+        m_crosshairHLine = nullptr;
+    }
+    if (m_crosshairVLine)
+    {
+        m_scene.removeItem(m_crosshairVLine);
+        delete m_crosshairVLine;
+        m_crosshairVLine = nullptr;
+    }
 }

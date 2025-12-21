@@ -68,6 +68,7 @@ public:
     void clearUserAnnotations();
     void undoLastAnnotation();
     void setProjectionLinesVisible(bool visible);
+    void setCrosshairPlacementEnabled(bool enabled);
     QGraphicsPathItem *addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg, qreal rotationOffsetDeg = 0.0);
     QColor drawingColor() const { return m_drawingColor; }
     int strokeWidth() const { return m_strokeWidth; }
@@ -129,6 +130,9 @@ private:
     bool m_lineDrawing = false;
     bool m_showProjectionLines = false;
     QList<QGraphicsLineItem *> m_projectionLines;
+    bool m_crosshairPlacementMode = false;
+    QGraphicsLineItem *m_crosshairHLine = nullptr;
+    QGraphicsLineItem *m_crosshairVLine = nullptr;
     QHash<MapToolItem *, QPointF> m_toolViewportPos;
     bool m_toolDragInProgress = false;
     MapToolItem *m_draggedToolItem = nullptr;
@@ -183,6 +187,8 @@ private:
     bool isAnnotationItem(QGraphicsItem *item) const;
     void updateProjectionLines();
     void clearProjectionLines();
+    void placeCrosshairAt(const QPointF &scenePos);
+    void clearCrosshair();
     MapToolItem *rulerItem() const;
     bool pointHitsRuler(const QPointF &scenePos, MapToolItem *ruler) const;
     QPointF rulerDirection(MapToolItem *ruler) const;

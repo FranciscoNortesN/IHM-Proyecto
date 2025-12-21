@@ -644,6 +644,14 @@ void MapOverlayPanel::handleDragEvent(QMouseEvent *event)
 
 void MapOverlayPanel::handleModeButtonClicked(int id)
 {
+    // If user selects another tool, turn off grid/crosshair mode
+    if (m_gridButton && m_gridButton->isChecked())
+    {
+        m_gridButton->blockSignals(true);
+        m_gridButton->setChecked(false);
+        m_gridButton->blockSignals(false);
+        emit gridToggled(false);
+    }
     setActiveMode(idToMode(id));
 }
 
