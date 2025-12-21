@@ -22,6 +22,7 @@
 #include <QMessageBox>
 #include <QShortcut>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPainter>
 #include <QPainterPath>
 #include <QResizeEvent>
@@ -566,18 +567,20 @@ void MainWindow::addMinimizedProblem(ProblemWidget *problem)
     
     // Crear botón con texto
     QPushButton *button = new QPushButton(buttonText, this);
-    button->setFixedSize(50, 50);
+    button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    button->setMinimumHeight(40);
     button->setStyleSheet(
         "QPushButton {"
-        "    border: none;"
+        "    border: 1px solid rgba(255, 255, 255, 0.25);"
         "    background-color: transparent;"
         "    color: white;"
-        "    border-radius: 25px;"
-        "    padding: 0px;"
+        "    border-radius: 6px;"
+        "    padding: 8px;"
         "    font-weight: bold;"
         "    font-size: 18px;"
         "}"
         "QPushButton:hover {"
+        "    border-color: rgba(255, 255, 255, 0.4);"
         "    color: #d0d0d0;"
         "}"
     );
@@ -592,11 +595,18 @@ void MainWindow::addMinimizedProblem(ProblemWidget *problem)
     
     m_minimizedButtons.append(button);
     
-    // Agregar el botón al layout del contenedor con alineación centrada
+    // Agregar el botón envuelto para ocupar ~80% del ancho
     if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout()) {
-        QVBoxLayout *layout = qobject_cast<QVBoxLayout*>(m_minimizedProblemsContainer->layout());
-        if (layout) {
-            layout->addWidget(button, 0, Qt::AlignHCenter);
+        QVBoxLayout *vLayout = qobject_cast<QVBoxLayout*>(m_minimizedProblemsContainer->layout());
+        if (vLayout) {
+            QWidget *row = new QWidget(m_minimizedProblemsContainer);
+            QHBoxLayout *hLayout = new QHBoxLayout(row);
+            hLayout->setContentsMargins(0, 0, 0, 5);
+            hLayout->setSpacing(0);
+            hLayout->addStretch(1);
+            hLayout->addWidget(button, 8);
+            hLayout->addStretch(1);
+            vLayout->addWidget(row);
         }
     }
     
@@ -614,12 +624,14 @@ void MainWindow::removeMinimizedProblem(ProblemWidget *problem)
     m_minimizedProblemNames.removeAt(index);
     QPushButton *button = m_minimizedButtons.takeAt(index);
     
-    // Remover del layout
+    // Remover del layout (fila contenedora)
     if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout()) {
-        m_minimizedProblemsContainer->layout()->removeWidget(button);
+        QWidget *row = button->parentWidget();
+        if (row) {
+            m_minimizedProblemsContainer->layout()->removeWidget(row);
+            row->deleteLater();
+        }
     }
-    
-    button->deleteLater();
 }
 
 void MainWindow::updateMinimizedButtonsPosition()

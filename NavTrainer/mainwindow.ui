@@ -163,7 +163,7 @@ padding:8px;</string>
         <widget class="QWidget" name="minimized_separator" native="true">
          <layout class="QVBoxLayout" name="minimized_separator_layout">
           <property name="spacing">
-           <number>0</number>
+           <number>5</number>
           </property>
           <property name="leftMargin">
            <number>10</number>
@@ -175,15 +175,15 @@ padding:8px;</string>
            <number>10</number>
           </property>
           <property name="bottomMargin">
-           <number>15</number>
+           <number>19</number>
           </property>
           <item>
            <widget class="Line" name="minimized_line">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgba(255, 255, 255, 0.3); min-height: 1px; max-height: 1px;</string>
+            </property>
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">background-color: white; min-height: 1px; max-height: 1px;</string>
             </property>
            </widget>
           </item>
@@ -191,13 +191,7 @@ padding:8px;</string>
         </widget>
        </item>
        <item row="7" column="0">
-        <widget class="QWidget" name="minimized_problems_container">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
+        <widget class="QWidget" name="minimized_problems_container" native="true">
          <layout class="QVBoxLayout" name="minimized_problems_layout">
           <property name="spacing">
            <number>0</number>
@@ -206,7 +200,7 @@ padding:8px;</string>
            <number>0</number>
           </property>
           <property name="topMargin">
-             <number>0</number>
+           <number>0</number>
           </property>
           <property name="rightMargin">
            <number>0</number>
@@ -214,6 +208,31 @@ padding:8px;</string>
           <property name="bottomMargin">
            <number>0</number>
           </property>
+          <item>
+           <widget class="QLabel" name="minimized_problems_top_spacer">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>6</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>6</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
