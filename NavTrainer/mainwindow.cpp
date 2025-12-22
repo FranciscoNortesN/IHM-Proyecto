@@ -164,7 +164,7 @@ void MainWindow::setupOverlayPanel()
     const QList<MapToolDescriptor> tools = {
         {QStringLiteral("tool_ruler"), tr("Regla"), QStringLiteral(":/assets/ruler.svg")},
         {QStringLiteral("tool_protractor"), tr("Transportador"), QStringLiteral(":/assets/transportador.svg")},
-        {QStringLiteral("tool_compass"), tr("Compás"), QStringLiteral(":/assets/compass_leg.svg")}};
+        {QStringLiteral("tool_compass"), tr("Compás"), QStringLiteral(":/assets/icons/compass.svg")}};
     m_overlayPanel->setToolDescriptors(tools);
 
     m_carta->setOverlayWidget(m_overlayPanel);

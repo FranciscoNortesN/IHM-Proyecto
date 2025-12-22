@@ -36,5 +36,6 @@
         <file>icons/calendar-black.svg</file>
         <file>icons/closeEye.svg</file>
         <file>icons/openEye.svg</file>
+        <file>icons/compass.svg</file>
     </qresource>
 </RCC>

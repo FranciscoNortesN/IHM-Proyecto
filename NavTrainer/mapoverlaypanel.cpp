@@ -284,6 +284,10 @@ void MapOverlayPanel::buildActionGrid()
                                         QIcon(QStringLiteral(":/assets/icons/drag.svg")), Mode::Drag);
     m_paintModeButton = createModeButton(QStringLiteral("actionPaintMode"), tr("Modo dibujo (P)"),
                                          QIcon(QStringLiteral(":/assets/icons/paint.svg")), Mode::Paint);
+    
+    createSettingsMenu();
+    m_paintModeButton->setMenu(m_settingsMenu);
+    m_paintModeButton->setPopupMode(QToolButton::MenuButtonPopup);
     m_eraseModeButton = createModeButton(QStringLiteral("actionEraseMode"), tr("Modo borrador (E)"),
                                          QIcon(QStringLiteral(":/assets/icons/erase.svg")), Mode::Erase);
     m_pointModeButton = createModeButton(QStringLiteral("actionPointMode"), tr("Marcar puntos (O)"),
@@ -292,22 +296,17 @@ void MapOverlayPanel::buildActionGrid()
                                         QIcon(QStringLiteral(":/assets/icons/text.svg")), Mode::Text);
     m_undoButton = makeActionButton(QStringLiteral("actionUndo"),
                                     QIcon(QStringLiteral(":/assets/icons/undo.svg")), tr("Deshacer (Ctrl+Z)"));
-    m_gridButton = makeActionButton(QStringLiteral("actionGrid"),
-                                    QIcon(QStringLiteral(":/assets/icons/grid.svg")), tr("Mostrar proyecciones"), true);
-    m_settingsButton = makeActionButton(QStringLiteral("actionSettings"),
-                                        QIcon(QStringLiteral(":/assets/icons/settings.svg")), tr("Ajustes"));
     m_colorButton = makeActionButton(QStringLiteral("actionColor"),
                                      QIcon(QStringLiteral(":/assets/icons/palette.svg")), tr("Color actual"));
     m_clearButton = makeActionButton(QStringLiteral("actionClear"),
                                      QIcon(QStringLiteral(":/assets/icons/trash.svg")), tr("Eliminar ediciones (Supr)"));
 
     createSettingsMenu();
-    m_settingsButton->setMenu(m_settingsMenu);
-    m_settingsButton->setPopupMode(QToolButton::InstantPopup);
+    m_paintModeButton->setMenu(m_settingsMenu);
+    m_paintModeButton->setPopupMode(QToolButton::MenuButtonPopup);
 
     connect(m_modeButtonGroup, &QButtonGroup::idClicked, this, &MapOverlayPanel::handleModeButtonClicked);
     connect(m_undoButton, &QToolButton::clicked, this, &MapOverlayPanel::undoRequested);
-    connect(m_gridButton, &QToolButton::toggled, this, &MapOverlayPanel::gridToggled);
     connect(m_clearButton, &QToolButton::clicked, this, &MapOverlayPanel::clearEditsRequested);
     connect(m_colorButton, &QToolButton::clicked, this, [this]()
             {
@@ -337,10 +336,8 @@ void MapOverlayPanel::buildActionGrid()
     placeButton(m_pointModeButton, 0, 4);
 
     placeButton(m_undoButton, 1, 0);
-    placeButton(m_gridButton, 1, 1);
-    placeButton(m_colorButton, 1, 2);
-    placeButton(m_settingsButton, 1, 3);
-    placeButton(m_clearButton, 1, 4);
+    placeButton(m_colorButton, 1, 1);
+    placeButton(m_clearButton, 1, 2);
 
     setActiveMode(Mode::Drag);
 }
@@ -644,14 +641,6 @@ void MapOverlayPanel::handleDragEvent(QMouseEvent *event)
 
 void MapOverlayPanel::handleModeButtonClicked(int id)
 {
-    // If user selects another tool, turn off grid/crosshair mode
-    if (m_gridButton && m_gridButton->isChecked())
-    {
-        m_gridButton->blockSignals(true);
-        m_gridButton->setChecked(false);
-        m_gridButton->blockSignals(false);
-        emit gridToggled(false);
-    }
     setActiveMode(idToMode(id));
 }
 
