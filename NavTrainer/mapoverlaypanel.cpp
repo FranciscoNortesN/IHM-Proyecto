@@ -284,10 +284,6 @@ void MapOverlayPanel::buildActionGrid()
                                         QIcon(QStringLiteral(":/assets/icons/drag.svg")), Mode::Drag);
     m_paintModeButton = createModeButton(QStringLiteral("actionPaintMode"), tr("Modo dibujo (P)"),
                                          QIcon(QStringLiteral(":/assets/icons/paint.svg")), Mode::Paint);
-    
-    createSettingsMenu();
-    m_paintModeButton->setMenu(m_settingsMenu);
-    m_paintModeButton->setPopupMode(QToolButton::MenuButtonPopup);
     m_eraseModeButton = createModeButton(QStringLiteral("actionEraseMode"), tr("Modo borrador (E)"),
                                          QIcon(QStringLiteral(":/assets/icons/erase.svg")), Mode::Erase);
     m_pointModeButton = createModeButton(QStringLiteral("actionPointMode"), tr("Marcar puntos (O)"),
@@ -298,12 +294,17 @@ void MapOverlayPanel::buildActionGrid()
                                     QIcon(QStringLiteral(":/assets/icons/undo.svg")), tr("Deshacer (Ctrl+Z)"));
     m_colorButton = makeActionButton(QStringLiteral("actionColor"),
                                      QIcon(QStringLiteral(":/assets/icons/palette.svg")), tr("Color actual"));
+    m_settingsButton = makeActionButton(QStringLiteral("actionSettings"),
+                                        QIcon(QStringLiteral(":/assets/icons/settings.svg")), tr("Ajustes"));
     m_clearButton = makeActionButton(QStringLiteral("actionClear"),
                                      QIcon(QStringLiteral(":/assets/icons/trash.svg")), tr("Eliminar ediciones (Supr)"));
 
-    createSettingsMenu();
-    m_paintModeButton->setMenu(m_settingsMenu);
-    m_paintModeButton->setPopupMode(QToolButton::MenuButtonPopup);
+    createSettingsPanel();
+    connect(m_settingsButton, &QToolButton::clicked, this, &MapOverlayPanel::toggleSettingsPanel);
+    if (m_settingsPanel)
+    {
+        m_settingsPanel->setVisible(false);
+    }
 
     connect(m_modeButtonGroup, &QButtonGroup::idClicked, this, &MapOverlayPanel::handleModeButtonClicked);
     connect(m_undoButton, &QToolButton::clicked, this, &MapOverlayPanel::undoRequested);
@@ -337,31 +338,37 @@ void MapOverlayPanel::buildActionGrid()
 
     placeButton(m_undoButton, 1, 0);
     placeButton(m_colorButton, 1, 1);
-    placeButton(m_clearButton, 1, 2);
+    placeButton(m_settingsButton, 1, 2);
+    placeButton(m_clearButton, 1, 3);
+
+    if (m_settingsPanel && m_actionGridLayout)
+    {
+        m_actionGridLayout->addWidget(m_settingsPanel, 2, 0, 1, 5);
+        m_settingsPanel->setVisible(false);
+    }
 
     setActiveMode(Mode::Drag);
 }
 
-void MapOverlayPanel::createSettingsMenu()
+void MapOverlayPanel::createSettingsPanel()
 {
-    if (m_settingsMenu)
+    if (m_settingsPanel)
     {
         return;
     }
 
-    m_settingsMenu = new QMenu(this);
-    auto *container = new QWidget(m_settingsMenu);
-    auto *layout = new QVBoxLayout(container);
+    m_settingsPanel = new QWidget(this);
+    auto *layout = new QVBoxLayout(m_settingsPanel);
     layout->setContentsMargins(12, 12, 12, 12);
     layout->setSpacing(8);
 
-    auto *thicknessLabel = new QLabel(tr("Grosor"), container);
-    m_thicknessSlider = new QSlider(Qt::Horizontal, container);
+    auto *thicknessLabel = new QLabel(tr("Grosor"), m_settingsPanel);
+    m_thicknessSlider = new QSlider(Qt::Horizontal, m_settingsPanel);
     m_thicknessSlider->setRange(2, 24);
     m_thicknessSlider->setValue(8);
 
-    auto *opacityLabel = new QLabel(tr("Opacidad"), container);
-    m_opacitySlider = new QSlider(Qt::Horizontal, container);
+    auto *opacityLabel = new QLabel(tr("Opacidad"), m_settingsPanel);
+    m_opacitySlider = new QSlider(Qt::Horizontal, m_settingsPanel);
     m_opacitySlider->setRange(10, 100);
     m_opacitySlider->setValue(85);
 
@@ -370,17 +377,14 @@ void MapOverlayPanel::createSettingsMenu()
     layout->addWidget(opacityLabel);
     layout->addWidget(m_opacitySlider);
 
-    auto *action = new QWidgetAction(m_settingsMenu);
-    action->setDefaultWidget(container);
-    m_settingsMenu->addAction(action);
-
     connect(m_thicknessSlider, &QSlider::valueChanged, this, [this](int value)
             {
         if (m_updatingSettingsUi)
         {
             return;
         }
-        emit strokeWidthChanged(value); });
+        emit strokeWidthChanged(value);
+    });
 
     connect(m_opacitySlider, &QSlider::valueChanged, this, [this](int value)
             {
@@ -388,7 +392,23 @@ void MapOverlayPanel::createSettingsMenu()
         {
             return;
         }
-        emit strokeOpacityChanged(value); });
+        emit strokeOpacityChanged(value);
+    });
+}
+
+void MapOverlayPanel::toggleSettingsPanel()
+{
+    if (!m_settingsPanel)
+    {
+        return;
+    }
+    const bool visible = m_settingsPanel->isVisible();
+    m_settingsPanel->setVisible(!visible);
+    if (!visible)
+    {
+        // ensure paint mode is active when opening settings
+        setActiveMode(Mode::Paint);
+    }
 }
 
 QToolButton *MapOverlayPanel::makeActionButton(const QString &objectName, const QIcon &icon,
@@ -473,6 +493,10 @@ void MapOverlayPanel::setActiveMode(Mode mode)
     }
 
     m_activeMode = mode;
+    if (m_settingsPanel && mode != Mode::Paint)
+    {
+        m_settingsPanel->setVisible(false);
+    }
     if (m_modeButtonGroup)
     {
         if (QAbstractButton *button = m_modeButtonGroup->button(modeToId(mode)))

@@ -95,7 +95,8 @@ private:
     QToolButton *m_undoButton = nullptr;
     QToolButton *m_colorButton = nullptr;
     QToolButton *m_clearButton = nullptr;
-    QMenu *m_settingsMenu = nullptr;
+    QToolButton *m_settingsButton = nullptr;
+    QWidget *m_settingsPanel = nullptr;
     QSlider *m_thicknessSlider = nullptr;
     QSlider *m_opacitySlider = nullptr;
     bool m_updatingSettingsUi = false;
@@ -109,7 +110,8 @@ private:
     void rebuildToolPane();
     void destroyToolButtons();
     void buildActionGrid();
-    void createSettingsMenu();
+    void createSettingsPanel();
+    void toggleSettingsPanel();
     QToolButton *makeActionButton(const QString &objectName, const QIcon &icon, const QString &toolTip, bool checkable = false);
     void updateColorButtonStyle();
     void handleModeButtonClicked(int id);
