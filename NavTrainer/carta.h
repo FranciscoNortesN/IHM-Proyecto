@@ -67,6 +67,8 @@ public:
     void setStrokeOpacity(int opacityPercent);
     void clearUserAnnotations();
     void undoLastAnnotation();
+    // Add a tool at the center of the viewport (public wrapper for click-to-add)
+    void placeToolAtViewportCenter(const QString &toolId, const QString &resourcePath);
     void setProjectionLinesVisible(bool visible);
     void setCrosshairPlacementEnabled(bool enabled);
     QGraphicsPathItem *addArcAnnotation(const QPointF &center, qreal radius, qreal startAngleDeg, qreal spanAngleDeg, qreal rotationOffsetDeg = 0.0);

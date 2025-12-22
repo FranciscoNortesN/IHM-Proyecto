@@ -72,6 +72,7 @@ namespace
 
 class ToolPaletteButton : public QFrame
 {
+    Q_OBJECT
 public:
     explicit ToolPaletteButton(const MapToolDescriptor &descriptor, QWidget *parent = nullptr)
         : QFrame(parent), m_descriptor(descriptor)
@@ -130,6 +131,22 @@ protected:
 
         startDrag();
     }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton)
+        {
+            const int moved = (event->pos() - m_dragStartPos).manhattanLength();
+            if (moved < QApplication::startDragDistance())
+            {
+                emit clicked(m_descriptor.id, m_descriptor.resourcePath);
+            }
+        }
+        QFrame::mouseReleaseEvent(event);
+    }
+
+signals:
+    void clicked(const QString &toolId, const QString &resourcePath);
 
 private:
     MapToolDescriptor m_descriptor;
@@ -550,6 +567,10 @@ void MapOverlayPanel::rebuildToolPane()
         auto *button = new ToolPaletteButton(descriptor, m_toolButtonsContainer);
         m_toolButtons.append(button);
         m_toolButtonsLayout->addWidget(button);
+        connect(button, &ToolPaletteButton::clicked, this, [this](const QString &toolId, const QString &resource)
+                {
+            emit toolRequested(toolId, resource);
+        });
     }
 }
 

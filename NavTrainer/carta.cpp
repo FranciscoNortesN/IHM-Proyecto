@@ -1338,7 +1338,7 @@ void Carta::clearUserAnnotations()
 {
     abortCurrentStroke();
     cancelLinePreview();
-    clearToolInstances();
+    // Do not remove tools when clearing user annotations: keep tools on the map
     removeTextItems();
     removeStrokeItems();
     removePointItems();
@@ -2140,6 +2140,17 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
 bool Carta::isToolItem(const QGraphicsItem *item) const
 {
     return item && item->data(ToolItemDataKey).toBool();
+}
+
+void Carta::placeToolAtViewportCenter(const QString &toolId, const QString &resourcePath)
+{
+    if (!viewport())
+    {
+        return;
+    }
+    const QPoint center = viewport()->rect().center();
+    const QPointF scenePos = QPointF(center);
+    addToolItem(toolId, resourcePath, scenePos);
 }
 
 void Carta::clearToolInstances()

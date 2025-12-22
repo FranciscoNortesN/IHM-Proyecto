@@ -62,6 +62,7 @@ signals:
     void gridToggled(bool enabled);
     void strokeWidthChanged(int width);
     void strokeOpacityChanged(int percent);
+    void toolRequested(const QString &toolId, const QString &resourcePath);
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

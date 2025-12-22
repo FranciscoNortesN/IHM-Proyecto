@@ -167,6 +167,15 @@ void MainWindow::setupOverlayPanel()
         {QStringLiteral("tool_compass"), tr("Compás"), QStringLiteral(":/assets/icons/compass.svg")}};
     m_overlayPanel->setToolDescriptors(tools);
 
+    connect(m_overlayPanel, &MapOverlayPanel::toolRequested, this, [this](const QString &toolId, const QString &resourcePath)
+            {
+        if (!m_carta)
+        {
+            return;
+        }
+        m_carta->placeToolAtViewportCenter(toolId, resourcePath);
+    });
+
     m_carta->setOverlayWidget(m_overlayPanel);
     m_carta->setDrawingColor(m_overlayPanel->currentColor());
 
