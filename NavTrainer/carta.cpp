@@ -1634,6 +1634,10 @@ void Carta::mousePressEvent(QMouseEvent *event)
                 handlePointClick(scenePos);
                 event->accept();
                 return;
+            case InteractionMode::Grid:
+                handleGridClick(scenePos);
+                event->accept();
+                return;
             case InteractionMode::Line:
                 handleLineClick(scenePos);
                 event->accept();
@@ -2480,6 +2484,44 @@ void Carta::handlePointClick(const QPointF &scenePos)
     m_scene.addItem(pointItem);
     m_pointItems.append(pointItem);
     registerAnnotation(pointItem);
+}
+
+void Carta::handleGridClick(const QPointF &scenePos)
+{
+    // Eliminar líneas anteriores si existen
+    if (m_currentHLine) {
+        m_scene.removeItem(m_currentHLine);
+        delete m_currentHLine;
+        m_currentHLine = nullptr;
+    }
+    if (m_currentVLine) {
+        m_scene.removeItem(m_currentVLine);
+        delete m_currentVLine;
+        m_currentVLine = nullptr;
+    }
+    
+    const QRectF sceneRect = m_scene.sceneRect();
+    if (!sceneRect.isValid()) {
+        return;
+    }
+    
+    // Crear línea horizontal
+    m_currentHLine = new QGraphicsLineItem(sceneRect.left(), scenePos.y(), sceneRect.right(), scenePos.y());
+    QPen pen(Qt::black);
+    pen.setWidth(2);
+    pen.setStyle(Qt::DashLine);
+    QColor color = Qt::black;
+    color.setAlpha(180);
+    pen.setColor(color);
+    m_currentHLine->setPen(pen);
+    m_currentHLine->setZValue(85.0);
+    m_scene.addItem(m_currentHLine);
+    
+    // Crear línea vertical
+    m_currentVLine = new QGraphicsLineItem(scenePos.x(), sceneRect.top(), scenePos.x(), sceneRect.bottom());
+    m_currentVLine->setPen(pen);
+    m_currentVLine->setZValue(85.0);
+    m_scene.addItem(m_currentVLine);
 }
 
 void Carta::handleLineClick(const QPointF &scenePos)

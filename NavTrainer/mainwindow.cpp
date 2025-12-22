@@ -127,6 +127,12 @@ void MainWindow::setupOverlayPanel()
         {
             m_carta->setInteractionMode(Carta::InteractionMode::Point);
         } });
+    connect(m_overlayPanel, &MapOverlayPanel::gridModeSelected, this, [this]()
+            {
+        if (m_carta)
+        {
+            m_carta->setInteractionMode(Carta::InteractionMode::Grid);
+        } });
     connect(m_overlayPanel, &MapOverlayPanel::colorPicked, this, [this](const QColor &color)
             {
         if (m_carta)

@@ -309,6 +309,8 @@ void MapOverlayPanel::buildActionGrid()
                                          QIcon(QStringLiteral(":/assets/icons/erase.svg")), Mode::Erase);
     m_pointModeButton = createModeButton(QStringLiteral("actionPointMode"), tr("Marcar puntos (O)"),
                                          QIcon(QStringLiteral(":/assets/icons/point.svg")), Mode::Point);
+    m_gridModeButton = createModeButton(QStringLiteral("actionGridMode"), tr("Mostrar proyecciones"),
+                                        QIcon(QStringLiteral(":/assets/icons/grid.svg")), Mode::Grid);
     m_textModeButton = createModeButton(QStringLiteral("actionTextMode"), tr("Añadir texto (T)"),
                                         QIcon(QStringLiteral(":/assets/icons/text.svg")), Mode::Text);
     m_undoButton = makeActionButton(QStringLiteral("actionUndo"),
@@ -353,11 +355,13 @@ void MapOverlayPanel::buildActionGrid()
     placeButton(m_eraseModeButton, 0, 2);
     placeButton(m_textModeButton, 0, 3);
     placeButton(m_pointModeButton, 0, 4);
+    placeButton(m_gridModeButton, 0, 4);
 
     placeButton(m_undoButton, 1, 0);
     placeButton(m_colorButton, 1, 1);
-    placeButton(m_settingsButton, 1, 2);
-    placeButton(m_clearButton, 1, 3);
+    placeButton(m_gridModeButton, 1, 2);
+    placeButton(m_settingsButton, 1, 3);
+    placeButton(m_clearButton, 1, 4);
 
     setActiveMode(Mode::Drag);
 }
@@ -521,6 +525,9 @@ void MapOverlayPanel::setActiveMode(Mode mode)
         break;
     case Mode::Point:
         emit pointModeSelected();
+        break;
+    case Mode::Grid:
+        emit gridModeSelected();
         break;
     case Mode::Line:
         // Line mode removed; no action
@@ -704,6 +711,8 @@ MapOverlayPanel::Mode MapOverlayPanel::idToMode(int id)
         return Mode::Text;
     case Mode::Point:
         return Mode::Point;
+    case Mode::Grid:
+        return Mode::Grid;
     case Mode::Drag:
     default:
         return Mode::Drag;

@@ -38,7 +38,8 @@ public:
         Erase,
         Text,
         Point,
-        Line
+        Line,
+        Grid
     };
 
     void setActiveMode(Mode mode);
@@ -56,6 +57,7 @@ signals:
     void eraseModeSelected();
     void textModeSelected();
     void pointModeSelected();
+    void gridModeSelected();
     void undoRequested();
     void clearEditsRequested();
     void colorPicked(const QColor &color);
@@ -93,6 +95,7 @@ private:
     QToolButton *m_eraseModeButton = nullptr;
     QToolButton *m_textModeButton = nullptr;
     QToolButton *m_pointModeButton = nullptr;
+    QToolButton *m_gridModeButton = nullptr;
     QToolButton *m_undoButton = nullptr;
     QToolButton *m_colorButton = nullptr;
     QToolButton *m_clearButton = nullptr;

@@ -50,7 +50,8 @@ public:
         Erase,
         Text,
         Point,
-        Line
+        Line,
+        Grid
     };
 
     bool loadMap(const QString &filePath);
@@ -132,6 +133,8 @@ private:
     bool m_lineDrawing = false;
     bool m_showProjectionLines = false;
     QList<QGraphicsLineItem *> m_projectionLines;
+    QGraphicsLineItem *m_currentHLine = nullptr;
+    QGraphicsLineItem *m_currentVLine = nullptr;
     bool m_crosshairPlacementMode = false;
     QGraphicsLineItem *m_crosshairHLine = nullptr;
     QGraphicsLineItem *m_crosshairVLine = nullptr;
@@ -164,6 +167,7 @@ private:
     bool overlayContainsViewportPoint(const QPoint &point) const;
     void handleTextClick(const QPointF &scenePos);
     void handlePointClick(const QPointF &scenePos);
+    void handleGridClick(const QPointF &scenePos);
     void handleLineClick(const QPointF &scenePos);
     void removeTextItems();
     void removeStrokeItems();
