@@ -114,7 +114,7 @@ Con elementos seleccionados puedes:
 - **Modificar**: Haz doble clic para editar propiedades
 - **Eliminar**: Pulsa Supr o usa el botón "Eliminar"
 
-### Deshacer y rehacer
+### Deshacer
 
 Si cometes un error:
 
