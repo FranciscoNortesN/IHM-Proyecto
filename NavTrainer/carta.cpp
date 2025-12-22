@@ -1012,22 +1012,11 @@ protected:
         
         painter->save();
         
-        // Draw right handle (ROTATE) - green circle with rotation icon
+        // Draw right handle (ROTATE) - green circle only
         QPointF rightCenter = rightHandleCenter();
         painter->setPen(QPen(Qt::white, 4));
         painter->setBrush(QColor(0, 150, 80, 200));
         painter->drawEllipse(rightCenter, kHandleRadius, kHandleRadius);
-        
-        // Draw rotation arc icon
-        painter->setPen(QPen(Qt::white, 6, Qt::SolidLine, Qt::RoundCap));
-        qreal arrowLen = kHandleRadius * 0.5;
-        QRectF arcRect(rightCenter.x() - arrowLen, rightCenter.y() - arrowLen, arrowLen * 2, arrowLen * 2);
-        painter->drawArc(arcRect, 30 * 16, 240 * 16);  // Draw arc
-        // Arrow at end of arc
-        painter->drawLine(rightCenter + QPointF(arrowLen * 0.5, -arrowLen * 0.87),
-                          rightCenter + QPointF(arrowLen * 0.3, -arrowLen * 0.5));
-        painter->drawLine(rightCenter + QPointF(arrowLen * 0.5, -arrowLen * 0.87),
-                          rightCenter + QPointF(arrowLen * 0.8, -arrowLen * 0.7));
         
         painter->restore();
     }
