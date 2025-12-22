@@ -14,9 +14,9 @@ NavTrainer cuenta con una interfaz de usuario diseñada para ser fácil de usar,
 
 La aplicación incluye herramientas digitales que simulan instrumentos de navegación reales:
 
-- **Regla**: Para medir distancias en la carta náutica
-- **Transportador**: Para medir ángulos y rumbos
-- **Compás**: Para trazar derrotas y círculos de posición
+- **Regla**: Para medir distancias y orientarla libremente; dispone de un asa de rotación en el extremo derecho y se mueve entero arrastrando cualquier otra parte de la regla.
+- **Transportador**: Para medir ángulos y rumbos con precisión.
+- **Compás**: Para trazar derrotas, arcos y círculos de posición. El compás funciona como un compás real: puedes rotarlo desde la punta pivot o desde la punta del lápiz (la rotación desde el lápiz puede además dibujar un arco de trazado).
 
 ### Sistema de problemas
 
@@ -58,7 +58,3 @@ Esta documentación está organizada en las siguientes secciones:
 - **Herramientas en mapa**: Guía detallada de las herramientas de navegación
 - **Problemas**: Cómo trabajar con el sistema de problemas
 - **Estadísticas**: Interpretación de tus datos de desempeño
-
-## Soporte
-
-Si encuentras algún problema o tienes sugerencias para mejorar NavTrainer, no dudes en contactar al equipo de desarrollo a través de los canales oficiales de soporte.

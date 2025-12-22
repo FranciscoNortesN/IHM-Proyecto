@@ -67,16 +67,6 @@ Si olvidaste tu contraseña:
 2. Introduce tu email registrado
 3. Recibirás instrucciones de recuperación
 
-## Privacidad y seguridad
-
-### Protección de datos
-
-NavTrainer toma en serio la seguridad de tus datos:
-
-- Las contraseñas se almacenan cifradas
-- No se comparte información personal con terceros
-- Puedes eliminar tu cuenta en cualquier momento
-
 ### Mejores prácticas
 
 Para mantener tu cuenta segura:
@@ -90,17 +80,9 @@ Para mantener tu cuenta segura:
 
 Para cerrar tu sesión de forma segura:
 
-1. Ve al menú de usuario
-2. Selecciona "Cerrar sesión"
-3. Confirma la acción
+1. Pulsa el botón "Cerrar sesión" en la barra lateral (si está visible). El botón permanece oculto cuando no hay usuario conectado.
+2. Confirma la acción cuando se te solicite.
 
-Tu progreso y configuración se guardarán automáticamente antes de cerrar la sesión.
+Tras cerrar sesión la aplicación restablece el avatar al icono por defecto y oculta el botón de cierre de sesión hasta que vuelvas a iniciar sesión.
 
-## Eliminar cuenta
-
-Si deseas eliminar permanentemente tu cuenta:
-
-1. Ve a configuración de perfil
-2. Selecciona "Eliminar cuenta"
-3. Confirma la acción (esta operación no se puede deshacer)
-4. Todos tus datos serán eliminados del sistema
+> Nota: La gestión del usuario (cambio de avatar o de nickname) se realiza en la ventana de "Gestión de usuario"; si desde ahí se emite una desconexión, la aplicación también limpia el estado y oculta el botón de logout.

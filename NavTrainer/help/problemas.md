@@ -71,14 +71,11 @@ Genera problemas aleatorios para práctica variada:
 3. El sistema generará un problema con datos aleatorios
 4. Resuelve y envía tu respuesta
 
-### Filtros disponibles
+**Notas de la ventana de ejercicio**
 
-Personaliza tu práctica:
-
-- **Por dificultad**: Básico, Intermedio, Avanzado
-- **Por categoría**: Rumbo, Distancia, Posición, etc.
-- **Por tiempo**: Límite de tiempo para resolver
-- **Por completitud**: Problemas no resueltos, resueltos incorrectamente, etc.
+- Las ventanas de problema se muestran como ventanas separadas con título `Ejercicio N` o `Ejercicio N (Aleatorio)` según procedencia.
+- Puedes minimizar un problema mientras mantienes tu trabajo: las sesiones de problema se pueden abrir y cerrar sin perder el estado si no las cierras permanentemente.
+- El área de la carta dentro del problema comparte las herramientas estándar (Regla, Compás, Transportador) para que realices la resolución directamente sobre la carta proporcionada.
 
 ## Resolver problemas
 
@@ -90,7 +87,6 @@ La pantalla de problema incluye:
 - **Carta**: Área de la carta náutica relevante
 - **Herramientas**: Acceso a regla, transportador, compás
 - **Campos de respuesta**: Donde introduces tus respuestas
-- **Ayudas**: Pistas opcionales (reducen puntuación)
 
 ### Proceso de resolución
 
@@ -102,15 +98,6 @@ La pantalla de problema incluye:
 6. **Verifica** tus cálculos antes de enviar
 7. **Envía** tu respuesta cuando estés seguro
 
-### Campos de respuesta
-
-Los tipos de respuesta pueden incluir:
-
-- Valores numéricos (rumbos, distancias, tiempos)
-- Posiciones geográficas (latitud/longitud)
-- Selección múltiple
-- Marcas en la carta náutica
-
 ### Uso de herramientas
 
 Durante la resolución puedes usar:
@@ -119,36 +106,6 @@ Durante la resolución puedes usar:
 - **Calculadora**: Para cálculos numéricos
 - **Tablas**: Tablas de declinación, desvío, etc.
 - **Notas**: Espacio para tus anotaciones
-
-## Sistema de puntuación
-
-### Cálculo de puntos
-
-Tu puntuación depende de:
-
-- **Precisión**: Qué tan cerca está tu respuesta de la correcta
-- **Tiempo**: Cuánto tardaste en resolver
-- **Intentos**: Número de intentos realizados
-- **Ayudas usadas**: Las pistas reducen la puntuación
-- **Dificultad**: Problemas más difíciles dan más puntos
-
-### Márgenes de error
-
-Se aceptan pequeños márgenes de error:
-
-- **Rumbos**: ±2° se considera correcto
-- **Distancias**: ±0.2 millas náuticas
-- **Posiciones**: ±1 minuto de arco
-- **Tiempos**: ±2 minutos
-
-### Bonus
-
-Gana puntos extra por:
-
-- Resolver sin ayudas
-- Completar en tiempo récord
-- Racha de respuestas correctas
-- Resolución en primer intento
 
 ## Retroalimentación
 
@@ -166,18 +123,7 @@ Cuando aciertas:
 Cuando fallas:
 
 - Se indica dónde está el error
-- Puedes intentarlo de nuevo (con penalización)
-- Se ofrece una pista
-- Puedes ver la solución completa (sin puntos)
-
-### Explicación detallada
-
-Después de resolver puedes ver:
-
-- **Solución paso a paso**: Cómo llegar a la respuesta correcta
-- **Método alternativo**: Otras formas de resolver el problema
-- **Errores comunes**: Qué errores suelen cometer los usuarios
-- **Conceptos clave**: Teoría relacionada con el problema
+- Puedes intentarlo de nuevo
 
 ## Historial de problemas
 
@@ -187,7 +133,6 @@ El sistema guarda:
 
 - Todos los problemas que has intentado
 - Tus respuestas y puntuaciones
-- Tiempo empleado en cada problema
 - Fecha y hora de cada intento
 
 ### Revisar problemas anteriores
@@ -217,35 +162,3 @@ Puedes volver a problemas anteriores:
 3. **Semana 5-6**: Navegación costera
 4. **Semana 7-8**: Problemas combinados
 5. **Semana 9+**: Problemas avanzados y astronómicos
-
-## Modo examen
-
-### Crear un examen
-
-Simula condiciones de examen real:
-
-1. Ve a "Modo examen"
-2. Selecciona número de problemas
-3. Establece límite de tiempo
-4. Elige dificultad
-5. Comienza el examen
-
-### Durante el examen
-
-En modo examen:
-
-- No puedes usar ayudas
-- El tiempo es limitado
-- No se muestran soluciones hasta el final
-- Solo un intento por problema
-- No puedes pausar
-
-### Resultados del examen
-
-Al finalizar ves:
-
-- Puntuación total
-- Porcentaje de aciertos
-- Tiempo empleado
-- Comparación con otros usuarios
-- Certificado de completitud (si apruebas)
