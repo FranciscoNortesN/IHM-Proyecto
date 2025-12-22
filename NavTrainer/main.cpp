@@ -7,6 +7,8 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    // Set application icon
+    QApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/icons/ship-wheel.svg")));
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();

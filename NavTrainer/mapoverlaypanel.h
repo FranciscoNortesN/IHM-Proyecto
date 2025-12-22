@@ -121,6 +121,7 @@ private:
     void handleDragEvent(QMouseEvent *event);
     static QPoint mouseGlobalPos(const QMouseEvent *event);
     void updateTitleElision();
+    bool isPosInDragHandle(const QPoint &pos) const;
 };
 
 #endif // MAPOVERLAYPANEL_H

@@ -34,6 +34,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     this->setWindowTitle("NavTrainer");
 
+    // Hide logout button until a user is logged in
+    ui->pushButton->setVisible(false);
+
     // Inicializar la base de datos
     // Usar la base de datos en la carpeta data
     m_dao = new NavigationDAO(QStringLiteral("data/navdb.sqlite"));
@@ -378,6 +381,9 @@ void MainWindow::onLogoutButtonClicked()
         // Restablecer icono del botón a default
         ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
 
+        // Hide logout button now there's no logged-in user
+        ui->pushButton->setVisible(false);
+
         // Cerrar ventana de gestión de usuario si está abierta
         if (m_userManagement)
         {
@@ -421,6 +427,8 @@ void MainWindow::onUserButtonClicked()
             m_currentUserNickname.clear();
             // Restablecer icono del botón a default
             ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
+            // Hide logout button since user disconnected
+            ui->pushButton->setVisible(false);
             m_userManagement = nullptr; });
 
         connect(m_userManagement, &UserManagement::nickNameActualizado, this,
@@ -555,6 +563,9 @@ void MainWindow::updateUserAvatar(const QString &nickName)
     {
         qWarning() << "Error al cargar avatar:" << e.what();
     }
+
+    // Show or hide the logout button based on whether a user is set
+    ui->pushButton->setVisible(!nickName.isEmpty());
 }
 
 void MainWindow::addMinimizedProblem(ProblemWidget *problem)

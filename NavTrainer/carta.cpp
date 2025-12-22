@@ -2165,7 +2165,8 @@ bool Carta::addToolItem(const QString &toolId, const QString &resourcePath, cons
         item->setTransformOriginPoint(bounds.center());
     }
     // scenePos is already in viewport coordinates for tool scene
-    item->setPos(scenePos);
+    // Center new tool at the drop point so it appears where the user dropped it
+    item->setPos(scenePos - bounds.center());
 
     m_toolScene.addItem(item);
     m_activeToolItems.insert(toolId, item);

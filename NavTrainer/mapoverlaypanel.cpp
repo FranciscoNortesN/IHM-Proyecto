@@ -277,7 +277,9 @@ void MapOverlayPanel::buildUi()
 
     buildActionGrid();
 
-    registerDragHandle(m_headerRow);
+    // Only allow dragging from the title card (not the whole header row)
+    if (m_headerRow) m_headerRow->setCursor(Qt::ArrowCursor);
+    titleCard->setCursor(Qt::SizeAllCursor);
     registerDragHandle(titleCard);
 }
 
@@ -617,19 +619,34 @@ bool MapOverlayPanel::eventFilter(QObject *watched, QEvent *event)
 
 void MapOverlayPanel::mousePressEvent(QMouseEvent *event)
 {
-    handleDragEvent(event);
+    // Only start drag if the press was inside a registered drag handle
+    if (isPosInDragHandle(event->pos()))
+    {
+        handleDragEvent(event);
+        return;
+    }
     QWidget::mousePressEvent(event);
 }
 
 void MapOverlayPanel::mouseMoveEvent(QMouseEvent *event)
 {
-    handleDragEvent(event);
+    // Only forward move events while dragging
+    if (m_dragging)
+    {
+        handleDragEvent(event);
+        return;
+    }
     QWidget::mouseMoveEvent(event);
 }
 
 void MapOverlayPanel::mouseReleaseEvent(QMouseEvent *event)
 {
-    handleDragEvent(event);
+    // Only handle release if a drag is in progress
+    if (m_dragging)
+    {
+        handleDragEvent(event);
+        return;
+    }
     QWidget::mouseReleaseEvent(event);
 }
 
@@ -722,4 +739,16 @@ QPoint MapOverlayPanel::mouseGlobalPos(const QMouseEvent *event)
 #else
     return event->globalPos();
 #endif
+}
+
+bool MapOverlayPanel::isPosInDragHandle(const QPoint &pos) const
+{
+    QWidget *w = childAt(pos);
+    while (w && w != this)
+    {
+        if (m_dragHandles.contains(w))
+            return true;
+        w = w->parentWidget();
+    }
+    return false;
 }
