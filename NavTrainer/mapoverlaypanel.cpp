@@ -343,25 +343,26 @@ void MapOverlayPanel::buildActionGrid()
     setActiveMode(Mode::Drag);
 }
 
-void MapOverlayPanel::createSettingsPanel()
+void MapOverlayPanel::createSettingsMenu()
 {
-    if (m_settingsPanel)
+    if (m_settingsMenu)
     {
         return;
     }
 
-    m_settingsPanel = new QWidget(this);
-    auto *layout = new QVBoxLayout(m_settingsPanel);
+    m_settingsMenu = new QMenu(this);
+    auto *container = new QWidget(m_settingsMenu);
+    auto *layout = new QVBoxLayout(container);
     layout->setContentsMargins(12, 12, 12, 12);
     layout->setSpacing(8);
 
-    auto *thicknessLabel = new QLabel(tr("Grosor"), m_settingsPanel);
-    m_thicknessSlider = new QSlider(Qt::Horizontal, m_settingsPanel);
+    auto *thicknessLabel = new QLabel(tr("Grosor"), container);
+    m_thicknessSlider = new QSlider(Qt::Horizontal, container);
     m_thicknessSlider->setRange(2, 24);
     m_thicknessSlider->setValue(8);
 
-    auto *opacityLabel = new QLabel(tr("Opacidad"), m_settingsPanel);
-    m_opacitySlider = new QSlider(Qt::Horizontal, m_settingsPanel);
+    auto *opacityLabel = new QLabel(tr("Opacidad"), container);
+    m_opacitySlider = new QSlider(Qt::Horizontal, container);
     m_opacitySlider->setRange(10, 100);
     m_opacitySlider->setValue(85);
 
@@ -369,6 +370,10 @@ void MapOverlayPanel::createSettingsPanel()
     layout->addWidget(m_thicknessSlider);
     layout->addWidget(opacityLabel);
     layout->addWidget(m_opacitySlider);
+
+    auto *action = new QWidgetAction(m_settingsMenu);
+    action->setDefaultWidget(container);
+    m_settingsMenu->addAction(action);
 
     connect(m_thicknessSlider, &QSlider::valueChanged, this, [this](int value)
             {
