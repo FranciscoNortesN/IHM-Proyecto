@@ -158,7 +158,7 @@ protected:
         m_dragging = false;
     }
 
-private:
+protected:
     bool m_dragging = false;
     QPointF m_pressPos;
 
