@@ -33,17 +33,17 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     this->setWindowTitle("NavTrainer");
-    
+
     // Inicializar la base de datos
     // Usar la base de datos en la carpeta data
     m_dao = new NavigationDAO(QStringLiteral("data/navdb.sqlite"));
 
     setupMapView();
     setupOverlayPanel();
-    
+
     // Inicializar notificación toast
     m_toastNotification = new ToastNotification(this);
-    
+
     // Inicializar contenedor de problemas minimizados
     m_minimizedProblemsContainer = ui->minimized_problems_container;
 
@@ -173,8 +173,7 @@ void MainWindow::setupOverlayPanel()
         {
             return;
         }
-        m_carta->placeToolAtViewportCenter(toolId, resourcePath);
-    });
+        m_carta->placeToolAtViewportCenter(toolId, resourcePath); });
 
     m_carta->setOverlayWidget(m_overlayPanel);
     m_carta->setDrawingColor(m_overlayPanel->currentColor());
@@ -359,31 +358,33 @@ void MainWindow::onHelpButtonClicked()
 void MainWindow::onLogoutButtonClicked()
 {
     // Si no hay usuario logueado, no hacer nada
-    if (m_currentUserNickname.isEmpty()) {
+    if (m_currentUserNickname.isEmpty())
+    {
         return;
     }
-    
+
     // Confirmar logout
     int respuesta = QMessageBox::question(
         this,
         tr("Cerrar sesión"),
         tr("¿Está seguro de que desea cerrar sesión?"),
-        QMessageBox::Yes | QMessageBox::No
-    );
-    
-    if (respuesta == QMessageBox::Yes) {
+        QMessageBox::Yes | QMessageBox::No);
+
+    if (respuesta == QMessageBox::Yes)
+    {
         // Limpiar usuario actual
         m_currentUserNickname.clear();
-        
+
         // Restablecer icono del botón a default
         ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
-        
+
         // Cerrar ventana de gestión de usuario si está abierta
-        if (m_userManagement) {
+        if (m_userManagement)
+        {
             m_userManagement->close();
             m_userManagement = nullptr;
         }
-        
+
         // Mostrar notificación toast
         showToast(tr("Sesión cerrada correctamente"), ToastNotification::Success);
     }
@@ -391,7 +392,8 @@ void MainWindow::onLogoutButtonClicked()
 
 void MainWindow::showToast(const QString &message, int type, int durationMs)
 {
-    if (m_toastNotification) {
+    if (m_toastNotification)
+    {
         m_toastNotification->showMessage(message, static_cast<ToastNotification::NotificationType>(type), durationMs);
     }
 }
@@ -399,177 +401,185 @@ void MainWindow::showToast(const QString &message, int type, int durationMs)
 void MainWindow::onUserButtonClicked()
 {
     // Si ya hay usuario logueado, mostrar gestión de usuario
-    if (!m_currentUserNickname.isEmpty()) {
-        if (m_userManagement) {
+    if (!m_currentUserNickname.isEmpty())
+    {
+        if (m_userManagement)
+        {
             m_userManagement->exec();
             return;
         }
-        
+
         // Crear la ventana de gestión
         m_userManagement = new UserManagement(m_dao, m_currentUserNickname, nullptr);
-        
+
         // Conectar señal cuando se actualice el avatar
-        connect(m_userManagement, &UserManagement::avatarActualizado, this, [this](const QString &nickName) {
-            updateUserAvatar(nickName);
-        });
-        
-        connect(m_userManagement, &UserManagement::usuarioDesconectado, this, [this]() {
+        connect(m_userManagement, &UserManagement::avatarActualizado, this, [this](const QString &nickName)
+                { updateUserAvatar(nickName); });
+
+        connect(m_userManagement, &UserManagement::usuarioDesconectado, this, [this]()
+                {
             m_currentUserNickname.clear();
             // Restablecer icono del botón a default
             ui->user_button->setIcon(QIcon(QStringLiteral(":/assets/icons/avatar-default.svg")));
-            m_userManagement = nullptr;
-        });
+            m_userManagement = nullptr; });
 
         connect(m_userManagement, &UserManagement::nickNameActualizado, this,
-                [this](const QString &anterior, const QString &nuevo) {
-            if (m_currentUserNickname == anterior) {
-                m_currentUserNickname = nuevo;
-            }
-            updateUserAvatar(nuevo);
-            showToast(tr("Nombre actualizado a %1").arg(nuevo), ToastNotification::Success);
-        });
-        
-        connect(m_userManagement, &QDialog::finished, this, [this]() {
-            m_userManagement = nullptr;
-        });
-        
+                [this](const QString &anterior, const QString &nuevo)
+                {
+                    if (m_currentUserNickname == anterior)
+                    {
+                        m_currentUserNickname = nuevo;
+                    }
+                    updateUserAvatar(nuevo);
+                    showToast(tr("Nombre actualizado a %1").arg(nuevo), ToastNotification::Success);
+                });
+
+        connect(m_userManagement, &QDialog::finished, this, [this]()
+                { m_userManagement = nullptr; });
+
         m_userManagement->setAttribute(Qt::WA_DeleteOnClose);
         m_userManagement->exec();
         return;
     }
-    
+
     // Si los widgets ya existen, solo mostrar el login
-    if (m_loginWidget) {
+    if (m_loginWidget)
+    {
         m_loginWidget->show();
         m_loginWidget->raise();
         m_loginWidget->activateWindow();
         return;
     }
-    
+
     // Crear los widgets de login y registro
     m_loginWidget = new LoginWidget(m_dao, this);
     m_registerWidget = new RegisterWidget(m_dao, this);
-    
+
     // Conectar señal de inicio de sesión exitoso
-    connect(m_loginWidget, &LoginWidget::sesionIniciada, this, [this](const QString &nickName) {
+    connect(m_loginWidget, &LoginWidget::sesionIniciada, this, [this](const QString &nickName)
+            {
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
-        m_loginWidget->close();
-    });
+        m_loginWidget->close(); });
 
     // Mostrar mensajes no bloqueantes desde los formularios
-    connect(m_loginWidget, &LoginWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo) {
-        showToast(mensaje, tipo);
-    });
-    
+    connect(m_loginWidget, &LoginWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo)
+            { showToast(mensaje, tipo); });
+
     // Conectar señales para cambiar entre pantallas
-    connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]() {
+    connect(m_loginWidget, &LoginWidget::irACrearCuenta, this, [this]()
+            {
         m_loginWidget->hide();
         m_registerWidget->show();
         m_registerWidget->raise();
-        m_registerWidget->activateWindow();
-    });
-    
-    connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]() {
+        m_registerWidget->activateWindow(); });
+
+    connect(m_registerWidget, &RegisterWidget::irAIniciarSesion, this, [this]()
+            {
         m_registerWidget->hide();
         m_loginWidget->show();
         m_loginWidget->raise();
-        m_loginWidget->activateWindow();
-    });
+        m_loginWidget->activateWindow(); });
 
-    connect(m_registerWidget, &RegisterWidget::cuentaCreada, this, [this](const QString &nickName) {
+    connect(m_registerWidget, &RegisterWidget::cuentaCreada, this, [this](const QString &nickName)
+            {
         m_currentUserNickname = nickName;
         updateUserAvatar(nickName);
         showToast(tr("¡Bienvenido %1!").arg(nickName), ToastNotification::Success);
         m_registerWidget->close();
         if (m_loginWidget) {
             m_loginWidget->close();
-        }
-    });
+        } });
 
-    connect(m_registerWidget, &RegisterWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo) {
-        showToast(mensaje, tipo);
-    });
-    
+    connect(m_registerWidget, &RegisterWidget::mostrarMensaje, this, [this](const QString &mensaje, int tipo)
+            { showToast(mensaje, tipo); });
+
     // Limpiar cuando se cierren las ventanas
-    connect(m_loginWidget, &QDialog::finished, this, [this]() {
+    connect(m_loginWidget, &QDialog::finished, this, [this]()
+            {
         m_loginWidget->deleteLater();
-        m_loginWidget = nullptr;
-    });
-    
-    connect(m_registerWidget, &QDialog::finished, this, [this]() {
+        m_loginWidget = nullptr; });
+
+    connect(m_registerWidget, &QDialog::finished, this, [this]()
+            {
         m_registerWidget->deleteLater();
-        m_registerWidget = nullptr;
-    });
-    
+        m_registerWidget = nullptr; });
+
     // Mostrar el login inicialmente (no modal)
     m_loginWidget->show();
 }
 
 void MainWindow::updateUserAvatar(const QString &nickName)
 {
-    if (!m_dao) {
+    if (!m_dao)
+    {
         return;
     }
-    
-    try {
+
+    try
+    {
         QMap<QString, ::User> usuarios = m_dao->loadUsers();
-        
-        if (usuarios.contains(nickName)) {
+
+        if (usuarios.contains(nickName))
+        {
             ::User usuario = usuarios.value(nickName);
             QImage avatarImage = usuario.avatar();
-            
-            if (!avatarImage.isNull()) {
+
+            if (!avatarImage.isNull())
+            {
                 int targetSize = 68;
-                
+
                 // Recortar la imagen a un cuadrado (lado más pequeño)
                 QPixmap originalPixmap = QPixmap::fromImage(avatarImage);
                 int minSize = qMin(originalPixmap.width(), originalPixmap.height());
-                
+
                 // Centrar y recortar a cuadrado
                 int x = (originalPixmap.width() - minSize) / 2;
                 int y = (originalPixmap.height() - minSize) / 2;
                 QPixmap squarePixmap = originalPixmap.copy(x, y, minSize, minSize);
-                
+
                 // Escalar al tamaño del botón
                 QPixmap scaledPixmap = squarePixmap.scaled(
                     targetSize, targetSize,
                     Qt::KeepAspectRatio,
-                    Qt::SmoothTransformation
-                );
-                
+                    Qt::SmoothTransformation);
+
                 // Establecer el icono del botón (cuadrado)
                 ui->user_button->setIcon(QIcon(scaledPixmap));
                 ui->user_button->setIconSize(QSize(68, 68));
             }
         }
-    } catch (const NavDAOException &e) {
+    }
+    catch (const NavDAOException &e)
+    {
         qWarning() << "Error al cargar avatar:" << e.what();
     }
 }
 
 void MainWindow::addMinimizedProblem(ProblemWidget *problem)
 {
-    if (m_minimizedProblems.contains(problem)) {
+    if (m_minimizedProblems.contains(problem))
+    {
         return;
     }
-    
+
     m_minimizedProblems.append(problem);
-    
+
     // Obtener el nombre del problema desde la ventana
     QString problemTitle = problem->windowTitle();
-    
+
     // Extraer solo el número del problema (ej: "Ejercicio 3" -> "E3")
     QString buttonText = "E";
     QRegularExpression regex("\\d+");
     QRegularExpressionMatch match = regex.match(problemTitle);
-    if (match.hasMatch()) {
+    if (match.hasMatch())
+    {
         buttonText += match.captured();
     }
-    
+
     m_minimizedProblemNames.append(buttonText);
-    
+
     // Crear botón con texto
     QPushButton *button = new QPushButton(buttonText, this);
     button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -587,23 +597,24 @@ void MainWindow::addMinimizedProblem(ProblemWidget *problem)
         "QPushButton:hover {"
         "    border-color: rgba(255, 255, 255, 0.4);"
         "    color: #d0d0d0;"
-        "}"
-    );
-    
-    connect(button, &QPushButton::clicked, [this, problem]() {
+        "}");
+
+    connect(button, &QPushButton::clicked, [this, problem]()
+            {
         problem->setWindowState(Qt::WindowActive);
         problem->show();
         problem->raise();
         problem->activateWindow();
-        removeMinimizedProblem(problem);
-    });
-    
+        removeMinimizedProblem(problem); });
+
     m_minimizedButtons.append(button);
-    
+
     // Agregar el botón envuelto para ocupar ~80% del ancho
-    if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout()) {
-        QVBoxLayout *vLayout = qobject_cast<QVBoxLayout*>(m_minimizedProblemsContainer->layout());
-        if (vLayout) {
+    if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout())
+    {
+        QVBoxLayout *vLayout = qobject_cast<QVBoxLayout *>(m_minimizedProblemsContainer->layout());
+        if (vLayout)
+        {
             QWidget *row = new QWidget(m_minimizedProblemsContainer);
             QHBoxLayout *hLayout = new QHBoxLayout(row);
             hLayout->setContentsMargins(0, 0, 0, 5);
@@ -614,25 +625,28 @@ void MainWindow::addMinimizedProblem(ProblemWidget *problem)
             vLayout->addWidget(row);
         }
     }
-    
+
     button->show();
 }
 
 void MainWindow::removeMinimizedProblem(ProblemWidget *problem)
 {
     int index = m_minimizedProblems.indexOf(problem);
-    if (index == -1) {
+    if (index == -1)
+    {
         return;
     }
-    
+
     m_minimizedProblems.removeAt(index);
     m_minimizedProblemNames.removeAt(index);
     QPushButton *button = m_minimizedButtons.takeAt(index);
-    
+
     // Remover del layout (fila contenedora)
-    if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout()) {
+    if (m_minimizedProblemsContainer && m_minimizedProblemsContainer->layout())
+    {
         QWidget *row = button->parentWidget();
-        if (row) {
+        if (row)
+        {
             m_minimizedProblemsContainer->layout()->removeWidget(row);
             row->deleteLater();
         }

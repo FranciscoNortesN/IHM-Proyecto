@@ -107,23 +107,60 @@ public:
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override
     {
+        // Record press position; don't assume drag until movement exceeds threshold
         if (event->button() == Qt::LeftButton && m_view)
         {
-            m_view->handleToolDragStarted();
-            m_view->setCursor(Qt::ClosedHandCursor);
+            m_pressPos = event->pos();
+            m_dragging = false;
         }
         QGraphicsSvgItem::mousePressEvent(event);
+    }
+
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        if (!(event->buttons() & Qt::LeftButton))
+        {
+            QGraphicsSvgItem::mouseMoveEvent(event);
+            return;
+        }
+
+        if (!m_dragging)
+        {
+            const QPointF delta = event->pos() - m_pressPos;
+            // Use squared distance to avoid sqrt
+            const qreal dist2 = QPointF::dotProduct(delta, delta);
+            const qreal threshold = static_cast<qreal>(QApplication::startDragDistance());
+            if (dist2 >= threshold * threshold)
+            {
+                m_dragging = true;
+                if (m_view)
+                {
+                    m_view->handleToolDragStarted();
+                    m_view->setCursor(Qt::ClosedHandCursor);
+                }
+            }
+        }
+
+        QGraphicsSvgItem::mouseMoveEvent(event);
     }
 
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override
     {
         QGraphicsSvgItem::mouseReleaseEvent(event);
-        if (m_view)
+        if (m_dragging)
         {
-            m_view->unsetCursor();
-            m_view->handleToolDragFinished(this);
+            if (m_view)
+            {
+                m_view->unsetCursor();
+                m_view->handleToolDragFinished(this);
+            }
         }
+        m_dragging = false;
     }
+
+private:
+    bool m_dragging = false;
+    QPointF m_pressPos;
 
     void wheelEvent(QGraphicsSceneWheelEvent *event) override
     {
@@ -1338,7 +1375,6 @@ void Carta::clearUserAnnotations()
 {
     abortCurrentStroke();
     cancelLinePreview();
-    // Do not remove tools when clearing user annotations: keep tools on the map
     removeTextItems();
     removeStrokeItems();
     removePointItems();

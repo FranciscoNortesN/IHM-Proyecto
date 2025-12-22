@@ -357,8 +357,6 @@ void MapOverlayPanel::buildActionGrid()
     placeButton(m_settingsButton, 1, 2);
     placeButton(m_clearButton, 1, 3);
 
-
-
     setActiveMode(Mode::Drag);
 }
 
@@ -400,8 +398,7 @@ void MapOverlayPanel::createSettingsMenu()
         {
             return;
         }
-        emit strokeWidthChanged(value);
-    });
+        emit strokeWidthChanged(value); });
 
     connect(m_opacitySlider, &QSlider::valueChanged, this, [this](int value)
             {
@@ -409,10 +406,8 @@ void MapOverlayPanel::createSettingsMenu()
         {
             return;
         }
-        emit strokeOpacityChanged(value);
-    });
+        emit strokeOpacityChanged(value); });
 }
-
 
 QToolButton *MapOverlayPanel::makeActionButton(const QString &objectName, const QIcon &icon,
                                                const QString &toolTip, bool checkable)
@@ -708,9 +703,12 @@ void MapOverlayPanel::updateColorButtonStyle()
     const QPixmap base = renderSvgPixmap(QStringLiteral(":/assets/icons/palette.svg"), iconSize);
     const QPixmap colored = base.isNull() ? QPixmap() : colorizePixmap(base, m_currentColor);
 
-    if (!colored.isNull()) {
+    if (!colored.isNull())
+    {
         m_colorButton->setIcon(QIcon(colored));
-    } else {
+    }
+    else
+    {
         m_colorButton->setIcon(QIcon(QStringLiteral(":/assets/icons/palette.svg")));
     }
     // Remove any custom stylesheet so it uses the default button style
