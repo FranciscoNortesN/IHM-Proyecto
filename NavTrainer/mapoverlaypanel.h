@@ -93,8 +93,6 @@ private:
     QToolButton *m_textModeButton = nullptr;
     QToolButton *m_pointModeButton = nullptr;
     QToolButton *m_undoButton = nullptr;
-    QToolButton *m_gridButton = nullptr;
-    QToolButton *m_settingsButton = nullptr;
     QToolButton *m_colorButton = nullptr;
     QToolButton *m_clearButton = nullptr;
     QMenu *m_settingsMenu = nullptr;

@@ -314,40 +314,41 @@ color: rgb(0, 0, 0);</string>
           </spacer>
          </item>
          <item row="1" column="0" colspan="7">
-          <widget class="QTabWidget" name="tabWidget">
-           <property name="currentIndex">
-            <number>0</number>
+          <widget class="QTableWidget" name="sessionsTable">
+           <property name="alternatingRowColors">
+            <bool>true</bool>
            </property>
-           <widget class="QWidget" name="aciertos">
-            <attribute name="title">
+           <property name="selectionBehavior">
+            <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+           </property>
+           <property name="sortingEnabled">
+            <bool>true</bool>
+           </property>
+           <column>
+            <property name="text">
+             <string>Sesión</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Inicio - Fin</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Duración</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
              <string>Aciertos</string>
-            </attribute>
-            <layout class="QGridLayout" name="gridLayout_7">
-             <item row="0" column="0">
-              <widget class="QListWidget" name="listWidget"/>
-             </item>
-            </layout>
-           </widget>
-           <widget class="QWidget" name="fallos">
-            <attribute name="title">
+            </property>
+           </column>
+           <column>
+            <property name="text">
              <string>Fallos</string>
-            </attribute>
-            <layout class="QGridLayout" name="gridLayout_8">
-             <item row="0" column="0">
-              <widget class="QListWidget" name="listWidget_2"/>
-             </item>
-            </layout>
-           </widget>
-           <widget class="QWidget" name="todo">
-            <attribute name="title">
-             <string>Todo</string>
-            </attribute>
-            <layout class="QGridLayout" name="gridLayout_9">
-             <item row="0" column="0">
-              <widget class="QListView" name="listView"/>
-             </item>
-            </layout>
-           </widget>
+            </property>
+           </column>
           </widget>
          </item>
         </layout>
