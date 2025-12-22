@@ -299,12 +299,9 @@ void MapOverlayPanel::buildActionGrid()
     m_clearButton = makeActionButton(QStringLiteral("actionClear"),
                                      QIcon(QStringLiteral(":/assets/icons/trash.svg")), tr("Eliminar ediciones (Supr)"));
 
-    createSettingsPanel();
-    connect(m_settingsButton, &QToolButton::clicked, this, &MapOverlayPanel::toggleSettingsPanel);
-    if (m_settingsPanel)
-    {
-        m_settingsPanel->setVisible(false);
-    }
+    createSettingsMenu();
+    m_settingsButton->setMenu(m_settingsMenu);
+    m_settingsButton->setPopupMode(QToolButton::InstantPopup);
 
     connect(m_modeButtonGroup, &QButtonGroup::idClicked, this, &MapOverlayPanel::handleModeButtonClicked);
     connect(m_undoButton, &QToolButton::clicked, this, &MapOverlayPanel::undoRequested);
@@ -341,11 +338,7 @@ void MapOverlayPanel::buildActionGrid()
     placeButton(m_settingsButton, 1, 2);
     placeButton(m_clearButton, 1, 3);
 
-    if (m_settingsPanel && m_actionGridLayout)
-    {
-        m_actionGridLayout->addWidget(m_settingsPanel, 2, 0, 1, 5);
-        m_settingsPanel->setVisible(false);
-    }
+
 
     setActiveMode(Mode::Drag);
 }
@@ -396,20 +389,6 @@ void MapOverlayPanel::createSettingsPanel()
     });
 }
 
-void MapOverlayPanel::toggleSettingsPanel()
-{
-    if (!m_settingsPanel)
-    {
-        return;
-    }
-    const bool visible = m_settingsPanel->isVisible();
-    m_settingsPanel->setVisible(!visible);
-    if (!visible)
-    {
-        // ensure paint mode is active when opening settings
-        setActiveMode(Mode::Paint);
-    }
-}
 
 QToolButton *MapOverlayPanel::makeActionButton(const QString &objectName, const QIcon &icon,
                                                const QString &toolTip, bool checkable)
@@ -493,9 +472,9 @@ void MapOverlayPanel::setActiveMode(Mode mode)
     }
 
     m_activeMode = mode;
-    if (m_settingsPanel && mode != Mode::Paint)
+    if (m_settingsMenu && mode != Mode::Paint)
     {
-        m_settingsPanel->setVisible(false);
+        m_settingsMenu->close();
     }
     if (m_modeButtonGroup)
     {
