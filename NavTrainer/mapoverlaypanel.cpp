@@ -72,7 +72,6 @@ namespace
 
 class ToolPaletteButton : public QFrame
 {
-    Q_OBJECT
 public:
     explicit ToolPaletteButton(const MapToolDescriptor &descriptor, QWidget *parent = nullptr)
         : QFrame(parent), m_descriptor(descriptor)
@@ -104,6 +103,9 @@ public:
             m_iconLabel->setPixmap(m_iconPixmap);
         }
     }
+
+    // Callback-based click handler to avoid the need for moc in this cpp file
+    std::function<void(const QString &, const QString &)> onClicked;
 
 protected:
     void mousePressEvent(QMouseEvent *event) override
@@ -139,14 +141,14 @@ protected:
             const int moved = (event->pos() - m_dragStartPos).manhattanLength();
             if (moved < QApplication::startDragDistance())
             {
-                emit clicked(m_descriptor.id, m_descriptor.resourcePath);
+                if (onClicked)
+                {
+                    onClicked(m_descriptor.id, m_descriptor.resourcePath);
+                }
             }
         }
         QFrame::mouseReleaseEvent(event);
     }
-
-signals:
-    void clicked(const QString &toolId, const QString &resourcePath);
 
 private:
     MapToolDescriptor m_descriptor;
@@ -567,10 +569,10 @@ void MapOverlayPanel::rebuildToolPane()
         auto *button = new ToolPaletteButton(descriptor, m_toolButtonsContainer);
         m_toolButtons.append(button);
         m_toolButtonsLayout->addWidget(button);
-        connect(button, &ToolPaletteButton::clicked, this, [this](const QString &toolId, const QString &resource)
-                {
+        button->onClicked = [this](const QString &toolId, const QString &resource)
+        {
             emit toolRequested(toolId, resource);
-        });
+        };
     }
 }
 
